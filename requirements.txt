@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+psycopg[binary]
+boto3
