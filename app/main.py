@@ -1,11 +1,24 @@
+from contextlib import asynccontextmanager
+
 import boto3
 import psycopg
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app.api import documents
 from app.core.config import settings
+from app.services import storage
 
-app = FastAPI(title="Knowledge Assistant")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    storage.ensure_bucket()
+    yield
+
+
+app = FastAPI(title="Knowledge Assistant", lifespan=lifespan)
+app.include_router(documents.router)
+
 
 @app.get("/health")
 def health():

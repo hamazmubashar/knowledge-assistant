@@ -5,3 +5,5 @@ psycopg[binary]
 boto3
 sqlalchemy
 alembic
+pymupdf
+python-multipart

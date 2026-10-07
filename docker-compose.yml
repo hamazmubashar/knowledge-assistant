@@ -15,6 +15,23 @@ services:
         condition: service_healthy
       storage:
         condition: service_started
+
+  worker:
+    build: .
+    command: python -m app.workers.ingest
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      STORAGE_ENDPOINT: http://storage:9000
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+    volumes:
+      - .:/code
+    depends_on:
+      db:
+        condition: service_healthy
+      storage:
+        condition: service_started
+
   db:
     image: pgvector/pgvector:pg16
     environment:
