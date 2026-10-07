@@ -3,3 +3,5 @@ uvicorn[standard]
 pydantic-settings
 psycopg[binary]
 boto3
+sqlalchemy
+alembic

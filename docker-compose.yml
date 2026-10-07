@@ -8,6 +8,8 @@ services:
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
     ports:
       - "8000:8000"
+    volumes:
+      - .:/code
     depends_on:
       db:
         condition: service_healthy
