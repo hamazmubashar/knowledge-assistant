@@ -6,6 +6,7 @@ services:
       STORAGE_ENDPOINT: http://storage:9000
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "8000:8000"
     volumes:
@@ -24,6 +25,7 @@ services:
       STORAGE_ENDPOINT: http://storage:9000
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      JWT_SECRET: ${JWT_SECRET}
     volumes:
       - .:/code
     depends_on:

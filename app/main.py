@@ -4,8 +4,7 @@ import boto3
 import psycopg
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-
-from app.api import documents
+from app.api import auth, documents
 from app.core.config import settings
 from app.services import storage
 
@@ -18,6 +17,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Knowledge Assistant", lifespan=lifespan)
 app.include_router(documents.router)
+app.include_router(auth.router)
 
 
 @app.get("/health")

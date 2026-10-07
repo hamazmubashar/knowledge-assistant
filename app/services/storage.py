@@ -29,3 +29,6 @@ def put_pdf(key: str, data: bytes):
 
 def download_to(key: str, path: str):
     _client().download_file(settings.storage_bucket, key, path)
+
+def get_pdf(key: str) -> bytes:
+    return _client().get_object(Bucket=settings.storage_bucket, Key=key)["Body"].read()
