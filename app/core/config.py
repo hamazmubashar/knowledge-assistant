@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     embedding_provider: str = "local"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
     embedding_cache_dir: str = "/models"
+    generation_provider: str = "ollama"
+    generation_model: str = "qwen2.5:3b"
+    ollama_base_url: str = "http://host.docker.internal:11434"
+    generation_timeout_seconds: int = 180
 
 
 settings = Settings()
