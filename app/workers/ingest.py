@@ -2,10 +2,12 @@ import logging
 import os
 import tempfile
 import time
+from datetime import timedelta
 
 import pymupdf
-from sqlalchemy import select
+from sqlalchemy import func, or_, select, update
 
+from app.core.config import settings
 from app.db.models import DocumentVersion, ExtractionMethod, Page, VersionStatus
 from app.db.session import SessionLocal
 from app.services import storage
@@ -26,6 +28,7 @@ def claim_next(db):
         return None
     v.status = VersionStatus.processing
     v.attempts += 1
+    v.processing_started_at = func.now()
     v.error_step = None
     v.error_message = None
     db.commit()
@@ -61,19 +64,34 @@ def process(version_id):
         finally:
             os.remove(tmp.name)
 
-
+def sweep_stuck(db):
+    cutoff = func.now() - timedelta(minutes=settings.stuck_timeout_minutes)
+    stmt = (
+        update(DocumentVersion)
+        .where(DocumentVersion.status == VersionStatus.processing)
+        .where(or_(DocumentVersion.processing_started_at.is_(None),
+                   DocumentVersion.processing_started_at < cutoff))
+        .values(status=VersionStatus.failed, error_step="timeout",
+                error_message="ProcessingTimeout")
+        .returning(DocumentVersion.id)
+    )
+    stuck_ids = db.execute(stmt).scalars().all()
+    db.commit()
+    for vid in stuck_ids:
+        log.warning("version %s marked failed: processing timeout", vid)
+        
 def main():
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s %(message)s")
     log.info("worker started")
     while True:
         with SessionLocal() as db:
+            sweep_stuck(db)
             version_id = claim_next(db)
         if version_id:
             process(version_id)
         else:
             time.sleep(POLL_SECONDS)
-
 
 if __name__ == "__main__":
     main()

@@ -87,6 +87,7 @@ class DocumentVersion(Base):
     file_hash: Mapped[str] = mapped_column(String(64))
     page_count: Mapped[int | None] = mapped_column(Integer)
     attempts: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    processing_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_step: Mapped[str | None] = mapped_column(String(50))
     error_message: Mapped[str | None] = mapped_column(Text)
     uploaded_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     max_upload_mb: int = 50
     jwt_secret: str = Field(min_length=32)
     jwt_expire_minutes: int = 60
+    stuck_timeout_minutes: int = 30
 
 
 settings = Settings()

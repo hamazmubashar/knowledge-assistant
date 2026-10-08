@@ -26,6 +26,7 @@ services:
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
       JWT_SECRET: ${JWT_SECRET}
+      STUCK_TIMEOUT_MINUTES: ${STUCK_TIMEOUT_MINUTES:-30}
     volumes:
       - .:/code
     depends_on:
