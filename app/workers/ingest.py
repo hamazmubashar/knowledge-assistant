@@ -2,21 +2,20 @@ import logging
 import os
 import tempfile
 import time
+import uuid
 from datetime import timedelta
 
 import pymupdf
 from sqlalchemy import delete, func, or_, select, update
-from app.services.ocr import get_ocr_provider
 
 from app.core.config import settings
-from app.db.models import DocumentVersion, ExtractionMethod, Page, VersionStatus
+from app.db.models import (Chunk, Document, DocumentVersion, Embedding, ExtractionMethod,
+                           Page, VersionStatus)
 from app.db.session import SessionLocal
 from app.services import storage
-
-import uuid
-
-from app.db.models import Chunk, Document
 from app.services.chunking import PageInput, chunk_pages
+from app.services.embeddings import ensure_active_index, get_embedder
+from app.services.ocr import get_ocr_provider
 
 log = logging.getLogger("ingest")
 POLL_SECONDS = 3
@@ -52,82 +51,6 @@ def owned_version(db, version_id, attempt):
     return v
 
 
-def process(version_id, attempt):
-    step = "download"
-    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
-    tmp.close()
-    try:
-        with SessionLocal() as db:
-            storage_key = db.get(DocumentVersion, version_id).storage_key
-        storage.download_to(storage_key, tmp.name)
-
-        step = "extract"
-        ocr = get_ocr_provider()
-        pages = []
-        with pymupdf.open(tmp.name) as pdf:
-            for n, p in enumerate(pdf, start=1):
-                text = p.get_text("text")
-                method = ExtractionMethod.pymupdf
-                if len(text.strip()) < settings.ocr_min_chars:
-                    step = "ocr"
-                    png = p.get_pixmap(dpi=200).tobytes("png")
-                    text = ocr.extract_text(png)
-                    method = ExtractionMethod.ocr
-                    step = "extract"
-                pages.append((n, text, method))
-
-        step = "save"
-        with SessionLocal() as db:
-            v = owned_version(db, version_id, attempt)
-            if v is None:
-                db.rollback()
-                log.warning("version %s attempt %s is stale; results discarded", version_id, attempt)
-                return
-            doc = db.get(Document, v.document_id)
-
-            db.execute(delete(Chunk).where(Chunk.version_id == version_id))
-            db.execute(delete(Page).where(Page.version_id == version_id))
-
-            page_ids, page_methods = {}, {}
-            for n, t, m in pages:
-                pid = uuid.uuid4()
-                page_ids[n], page_methods[n] = pid, m
-                db.add(Page(id=pid, version_id=version_id, page_number=n, text=t,
-                            extraction_method=m))
-            db.flush()
-
-            step = "chunk"
-            chunks = chunk_pages([PageInput(n, t, is_ocr=(m == ExtractionMethod.ocr))
-                                  for n, t, m in pages])
-            db.add_all([Chunk(
-                version_id=version_id, page_id=page_ids[c.page_number],
-                page_number=c.page_number, chunk_index=c.chunk_index,
-                heading=c.heading, text=c.text, token_count=c.token_estimate,
-                access_group=doc.access_group,
-                extraction_method=page_methods[c.page_number],
-                low_confidence=c.low_confidence,
-            ) for c in chunks])
-
-            v.page_count = len(pages)
-            v.status = VersionStatus.ready
-            db.commit()
-        log.info("version %s attempt %s ready, %s pages, %s chunks",
-                 version_id, attempt, len(pages), len(chunks))
-        log.info("version %s attempt %s ready, %s pages", version_id, attempt, len(pages))
-    except Exception as e:
-        with SessionLocal() as db:
-            v = owned_version(db, version_id, attempt)
-            if v is not None:
-                v.status = VersionStatus.failed
-                v.error_step = step
-                v.error_message = type(e).__name__
-                db.commit()
-            else:
-                db.rollback()
-        log.error("version %s attempt %s failed at %s: %s", version_id, attempt, step, type(e).__name__)
-    finally:
-        os.remove(tmp.name)
-
 def sweep_stuck(db):
     cutoff = func.now() - timedelta(minutes=settings.stuck_timeout_minutes)
     stmt = (
@@ -143,19 +66,118 @@ def sweep_stuck(db):
     db.commit()
     for vid in stuck_ids:
         log.warning("version %s marked failed: processing timeout", vid)
-        
+
+
+def process(version_id, attempt, embedder, index_id):
+    step = "download"
+    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+    tmp.close()
+    try:
+        with SessionLocal() as db:
+            v = db.get(DocumentVersion, version_id)
+            doc = db.get(Document, v.document_id)
+            storage_key, doc_id, title, group = v.storage_key, doc.id, doc.title, doc.access_group
+        storage.download_to(storage_key, tmp.name)
+
+        step = "extract"
+        ocr = get_ocr_provider()
+        pages = []
+        with pymupdf.open(tmp.name) as pdf:
+            for n, p in enumerate(pdf, start=1):
+                text = p.get_text("text")
+                method = ExtractionMethod.pymupdf
+                if len(text.strip()) < settings.ocr_min_chars:
+                    step = "ocr"
+                    text = ocr.extract_text(p.get_pixmap(dpi=200).tobytes("png"))
+                    method = ExtractionMethod.ocr
+                    step = "extract"
+                pages.append((n, text, method))
+
+        step = "chunk"
+        chunks = chunk_pages([PageInput(n, t, is_ocr=(m == ExtractionMethod.ocr))
+                              for n, t, m in pages])
+
+        step = "embed"
+        vectors = embedder.embed_documents(
+            [f"{title}\n{c.heading or ''}\n{c.text}" for c in chunks])
+
+        step = "save"
+        with SessionLocal() as db:
+            v = owned_version(db, version_id, attempt)
+            if v is None:
+                db.rollback()
+                log.warning("version %s attempt %s is stale; results discarded", version_id, attempt)
+                return
+
+            db.execute(delete(Chunk).where(Chunk.version_id == version_id))
+            db.execute(delete(Page).where(Page.version_id == version_id))
+
+            page_ids, page_methods = {}, {}
+            for n, t, m in pages:
+                pid = uuid.uuid4()
+                page_ids[n], page_methods[n] = pid, m
+                db.add(Page(id=pid, version_id=version_id, page_number=n, text=t,
+                            extraction_method=m))
+            db.flush()
+
+            chunk_ids = []
+            for c in chunks:
+                cid = uuid.uuid4()
+                chunk_ids.append(cid)
+                db.add(Chunk(
+                    id=cid, version_id=version_id, page_id=page_ids[c.page_number],
+                    page_number=c.page_number, chunk_index=c.chunk_index,
+                    heading=c.heading, text=c.text, token_count=c.token_estimate,
+                    access_group=group, extraction_method=page_methods[c.page_number],
+                    low_confidence=c.low_confidence))
+            db.flush()
+
+            db.add_all([Embedding(chunk_id=cid, index_id=index_id, embedding=vec)
+                        for cid, vec in zip(chunk_ids, vectors)])
+
+            db.execute(update(DocumentVersion)
+                       .where(DocumentVersion.document_id == doc_id,
+                              DocumentVersion.status == VersionStatus.published,
+                              DocumentVersion.id != version_id)
+                       .values(status=VersionStatus.superseded))
+            v.page_count = len(pages)
+            v.status = VersionStatus.published
+            v.published_at = func.now()
+            db.commit()
+        log.info("version %s attempt %s published: %s pages, %s chunks",
+                 version_id, attempt, len(pages), len(chunks))
+    except Exception as e:
+        with SessionLocal() as db:
+            v = owned_version(db, version_id, attempt)
+            if v is not None:
+                v.status = VersionStatus.failed
+                v.error_step = step
+                v.error_message = type(e).__name__
+                db.commit()
+            else:
+                db.rollback()
+        log.error("version %s attempt %s failed at %s: %s", version_id, attempt, step, type(e).__name__)
+    finally:
+        os.remove(tmp.name)
+
+
 def main():
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    log.info("worker started")
+    embedder = get_embedder()
+    with SessionLocal() as db:
+        index_id = ensure_active_index(db, embedder)
+    log.info("worker started; embedding index %s (%s, %s dims)",
+             index_id, embedder.model_name, embedder.dimensions)
     while True:
         with SessionLocal() as db:
             sweep_stuck(db)
             claimed = claim_next(db)
         if claimed:
-            process(*claimed)
+            process(*claimed, embedder, index_id)
         else:
             time.sleep(POLL_SECONDS)
+
 
 if __name__ == "__main__":
     main()

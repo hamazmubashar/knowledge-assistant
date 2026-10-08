@@ -14,3 +14,4 @@ httpx
 pytesseract
 pillow
 pgvector
+fastembed
