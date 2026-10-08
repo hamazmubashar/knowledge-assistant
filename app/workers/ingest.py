@@ -6,6 +6,7 @@ from datetime import timedelta
 
 import pymupdf
 from sqlalchemy import delete, func, or_, select, update
+from app.services.ocr import get_ocr_provider
 
 from app.core.config import settings
 from app.db.models import DocumentVersion, ExtractionMethod, Page, VersionStatus
@@ -56,8 +57,19 @@ def process(version_id, attempt):
         storage.download_to(storage_key, tmp.name)
 
         step = "extract"
+        ocr = get_ocr_provider()
+        pages = []
         with pymupdf.open(tmp.name) as pdf:
-            pages = [(n, p.get_text("text")) for n, p in enumerate(pdf, start=1)]
+            for n, p in enumerate(pdf, start=1):
+                text = p.get_text("text")
+                method = ExtractionMethod.pymupdf
+                if len(text.strip()) < settings.ocr_min_chars:
+                    step = "ocr"
+                    png = p.get_pixmap(dpi=200).tobytes("png")
+                    text = ocr.extract_text(png)
+                    method = ExtractionMethod.ocr
+                    step = "extract"
+                pages.append((n, text, method))
 
         step = "save"
         with SessionLocal() as db:
@@ -68,7 +80,7 @@ def process(version_id, attempt):
                 return
             db.execute(delete(Page).where(Page.version_id == version_id))
             db.add_all([Page(version_id=version_id, page_number=n, text=t,
-                             extraction_method=ExtractionMethod.pymupdf) for n, t in pages])
+                             extraction_method=m) for n, t, m in pages])
             v.page_count = len(pages)
             v.status = VersionStatus.ready
             db.commit()

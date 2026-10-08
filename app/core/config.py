@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(min_length=32)
     jwt_expire_minutes: int = 60
     stuck_timeout_minutes: int = 30
+    ocr_provider: str = "tesseract"
+    ocr_min_chars: int = 10
 
 
 settings = Settings()
