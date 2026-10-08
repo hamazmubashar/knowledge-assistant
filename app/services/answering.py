@@ -36,6 +36,44 @@ SCHEMA = {
     "required": ["sentences", "conflict"],
 }
 
+SUPPORT_SYSTEM = """You check whether a quote supports a claim.
+The claim is supported only if the quote alone states it. Numbers, names, conditions and negations must match.
+If the claim adds anything that is not in the quote, it is not supported.
+Answer in JSON with one key: supported (true or false)."""
+
+SUPPORT_SCHEMA = {"type": "object",
+                  "properties": {"supported": {"type": "boolean"}},
+                  "required": ["supported"]}
+
+_NUMBER = re.compile(r"\d+(?:[.,:]\d+)*")
+
+
+def numbers_supported(claim: str, quote: str) -> bool:
+    return set(_NUMBER.findall(claim)) <= set(_NUMBER.findall(quote))
+
+
+def support_check(sentences: list[dict], generator) -> tuple[list[dict], list[str], int]:
+    kept, dropped, total_ms = [], [], 0
+    for v in sentences:
+        if _norm(v["text"]) and _norm(v["text"]) in _norm(v["quote"]):
+            kept.append(v)
+            continue
+        if not numbers_supported(v["text"], v["quote"]):
+            dropped.append("number_mismatch")
+            continue
+        gen = generator.generate(SUPPORT_SYSTEM, f"Claim: {v['text']}\nQuote: {v['quote']}",
+                                 SUPPORT_SCHEMA)
+        total_ms += gen.latency_ms
+        try:
+            ok = json.loads(gen.text).get("supported") is True
+        except (json.JSONDecodeError, AttributeError):
+            ok = False
+        if ok:
+            kept.append(v)
+        else:
+            dropped.append("not_supported")
+    return kept, dropped, total_ms
+
 
 def _norm(s: str) -> str:
     return " ".join(re.sub(r"[^\w\s]", " ", s.lower()).split())
@@ -111,8 +149,11 @@ def answer(db, user, question, embedder, index_id, generator, k=5, debug=False) 
         return refuse("invalid_model_output")
     if not data.get("sentences"):
         return refuse("model_declined")
-
     verified, dropped = verify_sentences(data.get("sentences") or [], evidence)
+    if settings.support_check_enabled and verified:
+        verified, unsupported, check_ms = support_check(verified, generator)
+        dropped += unsupported
+        info["support_check_ms"] = check_ms
     info["dropped_sentences"] = dropped
     info["reattributed_citations"] = sum(1 for v in verified if v["reattributed"])
     if not verified or len(dropped) > len(verified):

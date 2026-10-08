@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://host.docker.internal:11434"
     generation_timeout_seconds: int = 180
     answer_max_distance: float = 0.30
+    support_check_enabled: bool = True
 
 
 settings = Settings()
