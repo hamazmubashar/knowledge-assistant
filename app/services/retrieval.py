@@ -49,7 +49,8 @@ def search(db, user, query, embedder, index_id, k=5, candidates=20):
         return []
 
     rows = db.execute(
-        _visible(select(Chunk, DocumentVersion.version_number, Document.title)
+        _visible(select(Chunk, DocumentVersion.version_number,
+                        DocumentVersion.document_id, Document.title)
                  .select_from(Chunk), groups)
         .where(Chunk.id.in_(top))
     ).all()
@@ -59,10 +60,10 @@ def search(db, user, query, embedder, index_id, k=5, candidates=20):
     for cid in top:
         if cid not in by_id:
             continue
-        chunk, version_number, title = by_id[cid]
+        chunk, version_number, document_id, title = by_id[cid]
         results.append({
             "chunk_id": str(chunk.id),
-            "document_id": str(chunk_document_id(db, chunk)),
+            "document_id": str(document_id),
             "document_title": title,
             "version_id": str(chunk.version_id),
             "version_number": version_number,
@@ -78,8 +79,3 @@ def search(db, user, query, embedder, index_id, k=5, candidates=20):
             "keyword_rank": krank.get(cid),
         })
     return results
-
-
-def chunk_document_id(db, chunk):
-    return db.scalar(select(DocumentVersion.document_id)
-                     .where(DocumentVersion.id == chunk.version_id))
