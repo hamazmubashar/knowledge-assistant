@@ -19,8 +19,11 @@ app = FastAPI(title="Knowledge Assistant", lifespan=lifespan)
 app.include_router(documents.router)
 app.include_router(auth.router)
 
+@app.get("/health/live")
+def live():
+    return {"status": "alive"}
 
-@app.get("/health")
+@app.get("/health/ready")
 def health():
     checks = {}
     try:
