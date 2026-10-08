@@ -5,7 +5,7 @@ import time
 from datetime import timedelta
 
 import pymupdf
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 
 from app.core.config import settings
 from app.db.models import DocumentVersion, ExtractionMethod, Page, VersionStatus
@@ -31,38 +31,61 @@ def claim_next(db):
     v.processing_started_at = func.now()
     v.error_step = None
     v.error_message = None
+    v.page_count = None
+    claimed = (v.id, v.attempts)
     db.commit()
-    return v.id
+    return claimed
 
 
-def process(version_id):
+def owned_version(db, version_id, attempt):
+    v = db.scalar(select(DocumentVersion)
+                  .where(DocumentVersion.id == version_id)
+                  .with_for_update())
+    if v is None or v.status != VersionStatus.processing or v.attempts != attempt:
+        return None
+    return v
+
+
+def process(version_id, attempt):
     step = "download"
     tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
     tmp.close()
-    with SessionLocal() as db:
-        try:
-            v = db.get(DocumentVersion, version_id)
-            storage.download_to(v.storage_key, tmp.name)
-            step = "extract"
-            with pymupdf.open(tmp.name) as pdf:
-                for i, page in enumerate(pdf, start=1):
-                    db.add(Page(version_id=v.id, page_number=i,
-                                text=page.get_text("text"),
-                                extraction_method=ExtractionMethod.pymupdf))
-                v.page_count = pdf.page_count
+    try:
+        with SessionLocal() as db:
+            storage_key = db.get(DocumentVersion, version_id).storage_key
+        storage.download_to(storage_key, tmp.name)
+
+        step = "extract"
+        with pymupdf.open(tmp.name) as pdf:
+            pages = [(n, p.get_text("text")) for n, p in enumerate(pdf, start=1)]
+
+        step = "save"
+        with SessionLocal() as db:
+            v = owned_version(db, version_id, attempt)
+            if v is None:
+                db.rollback()
+                log.warning("version %s attempt %s is stale; results discarded", version_id, attempt)
+                return
+            db.execute(delete(Page).where(Page.version_id == version_id))
+            db.add_all([Page(version_id=version_id, page_number=n, text=t,
+                             extraction_method=ExtractionMethod.pymupdf) for n, t in pages])
+            v.page_count = len(pages)
             v.status = VersionStatus.ready
             db.commit()
-            log.info("version %s ready, %s pages", version_id, v.page_count)
-        except Exception as e:
-            db.rollback()
-            v = db.get(DocumentVersion, version_id)
-            v.status = VersionStatus.failed
-            v.error_step = step
-            v.error_message = type(e).__name__
-            db.commit()
-            log.error("version %s failed at %s: %s", version_id, step, type(e).__name__)
-        finally:
-            os.remove(tmp.name)
+        log.info("version %s attempt %s ready, %s pages", version_id, attempt, len(pages))
+    except Exception as e:
+        with SessionLocal() as db:
+            v = owned_version(db, version_id, attempt)
+            if v is not None:
+                v.status = VersionStatus.failed
+                v.error_step = step
+                v.error_message = type(e).__name__
+                db.commit()
+            else:
+                db.rollback()
+        log.error("version %s attempt %s failed at %s: %s", version_id, attempt, step, type(e).__name__)
+    finally:
+        os.remove(tmp.name)
 
 def sweep_stuck(db):
     cutoff = func.now() - timedelta(minutes=settings.stuck_timeout_minutes)
@@ -87,9 +110,9 @@ def main():
     while True:
         with SessionLocal() as db:
             sweep_stuck(db)
-            version_id = claim_next(db)
-        if version_id:
-            process(version_id)
+            claimed = claim_next(db)
+        if claimed:
+            process(*claimed)
         else:
             time.sleep(POLL_SECONDS)
 

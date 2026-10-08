@@ -3,6 +3,8 @@ import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from sqlalchemy.orm import Session
+from sqlalchemy import update
+from app.db.models import VersionStatus
 
 from app.api.deps import get_current_user
 from app.core.authz import can_manage, ensure_can_view
@@ -88,3 +90,25 @@ def download_version(version_id: uuid.UUID, db: Session = Depends(get_db),
     db.commit()
     return Response(content=data, media_type="application/pdf",
                     headers={"Content-Disposition": 'inline; filename="document.pdf"'})
+@router.post("/versions/{version_id}/retry")
+def retry_version(version_id: uuid.UUID, db: Session = Depends(get_db),
+                  user: User = Depends(get_current_user)):
+    v = _get_viewable_version(db, user, version_id)
+    doc = db.get(Document, v.document_id)
+    if not can_manage(db, user, doc.access_group):
+        raise HTTPException(status_code=403, detail="Not allowed to manage this group")
+    requeued = db.execute(
+        update(DocumentVersion)
+        .where(DocumentVersion.id == version_id,
+               DocumentVersion.status == VersionStatus.failed)
+        .values(status=VersionStatus.queued, error_step=None,
+                error_message=None, processing_started_at=None)
+        .returning(DocumentVersion.id)
+    ).scalar_one_or_none()
+    if requeued is None:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Only failed versions can be retried")
+    db.add(AuditLog(actor_id=user.id, action="document.retry",
+                    target_type="document_version", target_id=str(version_id)))
+    db.commit()
+    return {"version_id": str(version_id), "status": "queued"}
