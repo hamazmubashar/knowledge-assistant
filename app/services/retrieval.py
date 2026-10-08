@@ -22,12 +22,14 @@ def search(db, user, query, embedder, index_id, k=5, candidates=20):
 
     qvec = embedder.embed_query(query)
     distance = Embedding.embedding.cosine_distance(qvec)
-    vector_ids = db.scalars(
-        _visible(select(Chunk.id).select_from(Chunk)
+    vector_rows = db.execute(
+        _visible(select(Chunk.id, distance.label("distance")).select_from(Chunk)
                  .join(Embedding, Embedding.chunk_id == Chunk.id), groups)
         .where(Embedding.index_id == index_id)
         .order_by(distance).limit(candidates)
     ).all()
+    vector_ids = [row[0] for row in vector_rows]
+    vdist = {row[0]: row[1] for row in vector_rows}
 
     tsq = func.websearch_to_tsquery("english", query)
     keyword_ids = db.scalars(
@@ -77,5 +79,6 @@ def search(db, user, query, embedder, index_id, k=5, candidates=20):
             "score": round(scores[cid], 5),
             "vector_rank": vrank.get(cid),
             "keyword_rank": krank.get(cid),
+            "distance": round(vdist[cid], 4) if cid in vdist else None,
         })
     return results

@@ -1,5 +1,7 @@
 import time
 import uuid
+from sqlalchemy import delete
+from app.db.models import Document
 
 import pymupdf
 import pytest
@@ -81,6 +83,10 @@ def env():
                 assert time.time() < deadline, "worker did not publish test documents in time"
                 time.sleep(1)
         yield c, users, doc_ids
+        with SessionLocal() as db:
+            db.execute(delete(Document).where(
+                Document.id.in_([uuid.UUID(x) for x in doc_ids.values()])))
+            db.commit()
 
 
 def search(c, headers, q):

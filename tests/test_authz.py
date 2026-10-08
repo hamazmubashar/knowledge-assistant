@@ -1,5 +1,6 @@
 import uuid
-
+from sqlalchemy import delete
+from app.db.models import Document
 import pymupdf
 import pytest
 from fastapi.testclient import TestClient
@@ -49,6 +50,9 @@ def env():
                         files={"file": ("hr.pdf", synthetic_pdf(), "application/pdf")})
         assert r.status_code == 201
         yield client, r.json()["version_id"], hr_user, support_user
+        with SessionLocal() as db:
+            db.execute(delete(Document).where(Document.id == uuid.UUID(r.json()["document_id"])))
+            db.commit()
 
 
 def test_no_token_is_rejected(env):

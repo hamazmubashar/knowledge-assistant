@@ -4,11 +4,12 @@ import boto3
 import psycopg
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from app.api import auth, documents, search
+from app.api import answer, auth, documents, search
 from app.db.session import SessionLocal
 from app.services.embeddings import ensure_active_index, get_embedder
 from app.core.config import settings
 from app.services import storage
+from app.services.generation import get_generator
 
 
 @asynccontextmanager
@@ -17,6 +18,7 @@ async def lifespan(app: FastAPI):
     app.state.embedder = get_embedder()
     with SessionLocal() as db:
         app.state.index_id = ensure_active_index(db, app.state.embedder)
+    app.state.generator = get_generator()
     yield
 
 
@@ -24,6 +26,7 @@ app = FastAPI(title="Knowledge Assistant", lifespan=lifespan)
 app.include_router(documents.router)
 app.include_router(auth.router)
 app.include_router(search.router)
+app.include_router(answer.router)
 
 @app.get("/health/live")
 def live():
