@@ -13,3 +13,4 @@ pytest
 httpx
 pytesseract
 pillow
+pgvector

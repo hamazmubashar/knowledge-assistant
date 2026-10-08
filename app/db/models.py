@@ -2,12 +2,15 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import (Boolean, DateTime, Enum as SAEnum, ForeignKey, Index,
-                        Integer, String, Text, UniqueConstraint, func, text)
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import (Boolean, Computed, DateTime, Enum as SAEnum, Float, ForeignKey,
+                        Index, Integer, String, Text, UniqueConstraint, func, text)
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+
+EMBEDDING_DIM = 384
 
 
 class Role(str, enum.Enum):
@@ -36,6 +39,12 @@ class VersionStatus(str, enum.Enum):
 class ExtractionMethod(str, enum.Enum):
     pymupdf = "pymupdf"
     ocr = "ocr"
+
+
+class IndexStatus(str, enum.Enum):
+    building = "building"
+    active = "active"
+    retired = "retired"
 
 
 def enum_col(e):
@@ -108,6 +117,7 @@ class Page(Base):
     page_number: Mapped[int] = mapped_column(Integer)
     text: Mapped[str] = mapped_column(Text)
     extraction_method: Mapped[ExtractionMethod] = mapped_column(enum_col(ExtractionMethod))
+    ocr_confidence: Mapped[float | None] = mapped_column(Float)
 
     __table_args__ = (UniqueConstraint("version_id", "page_number"),)
 
@@ -121,3 +131,55 @@ class AuditLog(Base):
     target_id: Mapped[str | None] = mapped_column(String(64))
     details: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class EmbeddingIndex(Base):
+    __tablename__ = "embedding_indexes"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    model_name: Mapped[str] = mapped_column(String(200))
+    dimensions: Mapped[int] = mapped_column(Integer)
+    status: Mapped[IndexStatus] = mapped_column(enum_col(IndexStatus), server_default="building")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("model_name", "dimensions"),
+        Index("uq_one_active_index", "status", unique=True,
+              postgresql_where=text("status = 'active'")),
+    )
+
+
+class Chunk(Base):
+    __tablename__ = "chunks"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    version_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("document_versions.id", ondelete="CASCADE"), index=True)
+    page_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("pages.id", ondelete="CASCADE"))
+    page_number: Mapped[int] = mapped_column(Integer)
+    chunk_index: Mapped[int] = mapped_column(Integer)
+    heading: Mapped[str | None] = mapped_column(Text)
+    text: Mapped[str] = mapped_column(Text)
+    token_count: Mapped[int] = mapped_column(Integer)
+    access_group: Mapped[AccessGroup] = mapped_column(enum_col(AccessGroup), index=True)
+    extraction_method: Mapped[ExtractionMethod] = mapped_column(enum_col(ExtractionMethod))
+    low_confidence: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    search_vector: Mapped[str] = mapped_column(
+        TSVECTOR,
+        Computed("to_tsvector('english', coalesce(heading, '') || ' ' || text)", persisted=True),
+    )
+
+    __table_args__ = (
+        UniqueConstraint("version_id", "chunk_index"),
+        Index("ix_chunks_search_vector", "search_vector", postgresql_using="gin"),
+    )
+
+
+class Embedding(Base):
+    __tablename__ = "embeddings"
+    chunk_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chunks.id", ondelete="CASCADE"), primary_key=True)
+    index_id: Mapped[int] = mapped_column(ForeignKey("embedding_indexes.id"), primary_key=True)
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+
+    __table_args__ = (
+        Index("ix_embeddings_hnsw", "embedding", postgresql_using="hnsw",
+              postgresql_ops={"embedding": "vector_cosine_ops"}),
+    )
