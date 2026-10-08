@@ -24,3 +24,6 @@ def ensure_can_view(db, user: User, doc: Document | None) -> None:
     if doc.access_group in readable_groups(db, user) or can_manage(db, user, doc.access_group):
         return
     raise HTTPException(status_code=404, detail="Not found")
+
+def allowed_groups(db, user: User) -> set[AccessGroup]:
+    return readable_groups(db, user) | admin_groups(db, user)
