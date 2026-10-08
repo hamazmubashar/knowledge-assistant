@@ -13,6 +13,11 @@ from app.db.models import DocumentVersion, ExtractionMethod, Page, VersionStatus
 from app.db.session import SessionLocal
 from app.services import storage
 
+import uuid
+
+from app.db.models import Chunk, Document
+from app.services.chunking import PageInput, chunk_pages
+
 log = logging.getLogger("ingest")
 POLL_SECONDS = 3
 
@@ -78,12 +83,36 @@ def process(version_id, attempt):
                 db.rollback()
                 log.warning("version %s attempt %s is stale; results discarded", version_id, attempt)
                 return
+            doc = db.get(Document, v.document_id)
+
+            db.execute(delete(Chunk).where(Chunk.version_id == version_id))
             db.execute(delete(Page).where(Page.version_id == version_id))
-            db.add_all([Page(version_id=version_id, page_number=n, text=t,
-                             extraction_method=m) for n, t, m in pages])
+
+            page_ids, page_methods = {}, {}
+            for n, t, m in pages:
+                pid = uuid.uuid4()
+                page_ids[n], page_methods[n] = pid, m
+                db.add(Page(id=pid, version_id=version_id, page_number=n, text=t,
+                            extraction_method=m))
+            db.flush()
+
+            step = "chunk"
+            chunks = chunk_pages([PageInput(n, t, is_ocr=(m == ExtractionMethod.ocr))
+                                  for n, t, m in pages])
+            db.add_all([Chunk(
+                version_id=version_id, page_id=page_ids[c.page_number],
+                page_number=c.page_number, chunk_index=c.chunk_index,
+                heading=c.heading, text=c.text, token_count=c.token_estimate,
+                access_group=doc.access_group,
+                extraction_method=page_methods[c.page_number],
+                low_confidence=c.low_confidence,
+            ) for c in chunks])
+
             v.page_count = len(pages)
             v.status = VersionStatus.ready
             db.commit()
+        log.info("version %s attempt %s ready, %s pages, %s chunks",
+                 version_id, attempt, len(pages), len(chunks))
         log.info("version %s attempt %s ready, %s pages", version_id, attempt, len(pages))
     except Exception as e:
         with SessionLocal() as db:
