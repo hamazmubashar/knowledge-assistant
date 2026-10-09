@@ -28,7 +28,9 @@ def main():
             user = User(email=email, password_hash="!disabled", role=Role(args.role))
             db.add(user)
             db.commit()
-        result = answer(db, user, args.question, embedder, index_id, get_generator(), debug=True)
+        judge = get_generator(settings.judge_model) if settings.judge_model else None
+        result = answer(db, user, args.question, embedder, index_id, get_generator(),
+                        debug=True, judge=judge)
     print(json.dumps(result, indent=2))
 
 

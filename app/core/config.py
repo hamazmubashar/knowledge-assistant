@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     support_check_enabled: bool = True
     answer_min_relevance: float | None = None
     gemini_api_key: str | None = None
+    judge_model: str | None = "gemini:gemma-4-31b-it"
+    relevance_check_enabled: bool = True
 
 
 settings = Settings()

@@ -15,7 +15,7 @@ from app.db.session import SessionLocal
 from app.eval.corpus import CORPUS_VERSION, TITLE_TO_GROUP
 from app.services.answering import answer
 from app.services.embeddings import ensure_active_index, get_embedder
-from app.services.generation import get_generator
+from app.services.generation import CachedGenerator, QuotaExhausted, get_generator
 
 EVAL_DIR = Path("/code/eval")
 HAS_ANSWER = {"answerable", "injection"}
@@ -37,7 +37,7 @@ def score(q, r):
     answered = r["status"] == "answered"
     cites = [s["citation"] for s in r["sentences"]]
     o = {"id": q["id"], "type": q["type"], "answered": answered, "reason": r["refusal_reason"],
-         "latency_ms": r["retrieval_ms"] + (r["generation_ms"] or 0) + r.get("support_check_ms", 0),
+         "latency_ms": r["retrieval_ms"] + (r["generation_ms"] or 0) + r.get("judge_ms", 0),
          "generated": r["generation_ms"] is not None, "sentences": len(cites),
          "reattributed": r.get("reattributed_citations", 0), "dropped": r["dropped_sentences"],
          "leak": False, "unsupported": False, "injected": False, "cite_hits": 0,
@@ -99,6 +99,9 @@ def summarize(rows):
 def pct(x):
     return f"{100 * x:.1f}%"
 
+def make_generator(name):
+    g = get_generator(name)
+    return CachedGenerator(g, EVAL_DIR / "cache") if g.provider == "gemini" else g
 
 def main():
     if not settings.database_url.endswith("/knowledge_eval"):
@@ -106,6 +109,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--set", choices=["dev", "heldout"], required=True)
     ap.add_argument("--models", default=settings.generation_model)
+    ap.add_argument("--judge", default=settings.judge_model or "none")
     args = ap.parse_args()
 
     qfile = EVAL_DIR / f"answers_{args.set}.json"
@@ -113,19 +117,28 @@ def main():
     questions = json.loads(raw)
     embedder = get_embedder()
     models = [m.strip() for m in args.models.split(",")]
-    results = {}
+    results, stopped = {}, None
+    judge = None if args.judge == "none" else make_generator(args.judge)
     with SessionLocal() as db:
         index_id = ensure_active_index(db, embedder)
         users = {r: eval_user(db, r) for r in ("support", "operations", "hr")}
         for model in models:
-            gen = get_generator(model)
+            gen = make_generator(model)
             rows = []
-            for q in questions:
-                r = answer(db, users[q["role"]], q["question"], embedder, index_id, gen)
-                rows.append(score(q, r))
-                print(f"[{model}] {q['id']} {q['type']}: {'answered' if rows[-1]['answered'] else 'refused'}"
-                      f" · correct={rows[-1]['correct']} · {rows[-1]['latency_ms']} ms")
-            results[model] = (rows, summarize(rows))
+            try:
+                for q in questions:
+                    r = answer(db, users[q["role"]], q["question"], embedder, index_id, gen, judge=judge)
+                    rows.append(score(q, r))
+                    print(f"[{model}] {q['id']} {q['type']}: "
+                          f"{'answered' if rows[-1]['answered'] else 'refused'}"
+                          f" · correct={rows[-1]['correct']} · {rows[-1]['latency_ms']} ms")
+            except QuotaExhausted as e:
+                stopped = f"{e}. Rerun tomorrow: cached responses are reused."
+            if rows:
+                results[model] = (rows, summarize(rows))
+            if stopped:
+                break
+    models = list(results)
 
     now = datetime.now(timezone.utc)
     lines = [f"# Answer evaluation: {args.set} set", "",
@@ -133,7 +146,8 @@ def main():
              f"- Corpus version: {CORPUS_VERSION}",
              f"- Question file: {qfile.name} (sha256 {hashlib.sha256(raw).hexdigest()[:12]})",
              f"- Embedding model: {embedder.model_name}; evidence threshold: {settings.answer_max_distance}",
-             f"- Support check: {'on' if settings.support_check_enabled else 'off'} (same model judges its own answers)",
+             f"- Judge (support + relevance): {args.judge}; never the answer model",
+             f"- **Incomplete run:** {stopped}" if stopped else "- Run complete",
              f"- Relevance gate: {settings.answer_min_relevance if settings.answer_min_relevance is not None else 'off (logging only)'}",
              "- Scoring: deterministic keyword facts + citation page match; no AI grader", "",
              "## Comparison against Alex's targets", "",

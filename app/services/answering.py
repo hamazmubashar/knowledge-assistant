@@ -55,7 +55,7 @@ def numbers_supported(claim: str, quote: str) -> bool:
     return set(_NUMBER.findall(claim)) <= set(_NUMBER.findall(quote))
 
 
-def support_check(sentences: list[dict], generator) -> tuple[list[dict], list[str], int]:
+def support_check(sentences: list[dict], judge) -> tuple[list[dict], list[str], int]:
     kept, dropped, total_ms = [], [], 0
     for v in sentences:
         if _norm(v["text"]) and _norm(v["text"]) in _norm(v["quote"]):
@@ -64,8 +64,11 @@ def support_check(sentences: list[dict], generator) -> tuple[list[dict], list[st
         if not numbers_supported(v["text"], v["quote"]):
             dropped.append("number_mismatch")
             continue
-        gen = generator.generate(SUPPORT_SYSTEM, f"Claim: {v['text']}\nQuote: {v['quote']}",
-                                 SUPPORT_SCHEMA)
+        if judge is None:
+            dropped.append("unverified_no_judge")
+            continue
+        gen = judge.generate(SUPPORT_SYSTEM, f"Claim: {v['text']}\nQuote: {v['quote']}",
+                             SUPPORT_SCHEMA)
         total_ms += gen.latency_ms
         try:
             ok = json.loads(gen.text).get("supported") is True
@@ -77,6 +80,39 @@ def support_check(sentences: list[dict], generator) -> tuple[list[dict], list[st
             dropped.append("not_supported")
     return kept, dropped, total_ms
 
+RELEVANCE_SYSTEM = """You check whether an answer sentence directly answers a question.
+It answers the question only if it gives the specific information asked for.
+A sentence about a related but different topic does not answer it.
+Answer in JSON with one key: relevant (true or false)."""
+
+RELEVANCE_SCHEMA = {"type": "object",
+                    "properties": {"relevant": {"type": "boolean"}},
+                    "required": ["relevant"]}
+
+
+def relevance_check(question: str, sentences: list[dict], judge) -> tuple[list[dict], list[str], int]:
+    kept, dropped, total_ms = [], [], 0
+    for v in sentences:
+        gen = judge.generate(RELEVANCE_SYSTEM,
+                             f"Question: {question}\nAnswer sentence: {v['text']}", RELEVANCE_SCHEMA)
+        total_ms += gen.latency_ms
+        try:
+            ok = json.loads(gen.text).get("relevant") is True
+        except (json.JSONDecodeError, AttributeError):
+            ok = False
+        if ok:
+            kept.append(v)
+        else:
+            dropped.append("not_relevant")
+    return kept, dropped, total_ms
+
+
+def ensure_independent_judge(generator, judge) -> None:
+    if judge is None:
+        return
+    if (getattr(judge, "provider", None), judge.model_name) == \
+            (getattr(generator, "provider", None), generator.model_name):
+        raise ValueError("The judge model must differ from the answer model")
 
 def _norm(s: str) -> str:
     return " ".join(re.sub(r"[^\w\s]", " ", s.lower()).split())
@@ -143,15 +179,77 @@ def relevance_scores(question: str, sentences: list[dict], embedder) -> list[flo
     qv = embedder.embed_query(question)
     vectors = embedder.embed_documents([s["text"] for s in sentences])
     return [round(_cosine(qv, v), 3) for v in vectors]
-
-def answer(db, user, question, embedder, index_id, generator, k=5, debug=False) -> dict:
+def answer(db, user, question, embedder, index_id, generator, k=5, debug=False, judge=None) -> dict:
+    ensure_independent_judge(generator, judge)
     t0 = time.perf_counter()
     results = retrieval.search(db, user, question, embedder, index_id, k=k)
     retrieval_ms = round((time.perf_counter() - t0) * 1000)
     distances = [r["distance"] for r in results if r["distance"] is not None]
     best = min(distances) if distances else None
-    info = {"model": generator.model_name, "retrieved": len(results), "best_distance": best,
-            "retrieval_ms": retrieval_ms, "generation_ms": None, "dropped_sentences": []}
+    info = {"model": generator.model_name, "judge": judge.model_name if judge else None,
+            "retrieved": len(results), "best_distance": best, "retrieval_ms": retrieval_ms,
+            "generation_ms": None, "judge_ms": 0, "dropped_sentences": []}
+
+    def refuse(reason):
+        return {"status": "refused", "answer": REFUSAL_TEXT, "refusal_reason": reason,
+                "conflict": False, "sentences": [], **info}
+
+    if best is None or best > settings.answer_max_distance:
+        return refuse("weak_evidence")
+
+    clean_results, redacted = [], 0
+    for r in results:
+        text, n1 = sanitize(r["text"])
+        heading, n2 = sanitize(r["heading"] or "")
+        redacted += n1 + n2
+        clean_results.append({**r, "text": text, "heading": heading or None})
+    info["redacted_sentences"] = redacted
+    evidence = {f"SOURCE_{i}": r for i, r in enumerate(clean_results, start=1)}
+
+    gen = generator.generate(SYSTEM_PROMPT, build_prompt(question, clean_results), SCHEMA)
+    info["generation_ms"] = gen.latency_ms
+    info["input_tokens"], info["output_tokens"] = gen.input_tokens, gen.output_tokens
+    if debug:
+        info["raw_model_output"] = gen.text
+        info["evidence"] = {eid: f"{r['document_title']} p{r['page_number']}: {r['text'][:150]}"
+                            for eid, r in evidence.items()}
+    try:
+        data = json.loads(gen.text)
+    except json.JSONDecodeError:
+        return refuse("invalid_model_output")
+    if not data.get("sentences"):
+        return refuse("model_declined")
+
+    verified, dropped = verify_sentences(data.get("sentences") or [], evidence)
+    verified, injected = filter_injected(verified)
+    dropped += ["suspected_injection"] * injected
+    verified, heading_only = drop_heading_only(verified, evidence)
+    dropped += ["heading_only"] * heading_only
+    if settings.support_check_enabled and verified:
+        verified, unsupported, ms = support_check(verified, judge)
+        dropped += unsupported
+        info["judge_ms"] += ms
+    if judge is not None and settings.relevance_check_enabled and verified:
+        verified, irrelevant, ms = relevance_check(question, verified, judge)
+        dropped += irrelevant
+        info["judge_ms"] += ms
+    info["relevance"] = relevance_scores(question, verified, embedder)
+    info["dropped_sentences"] = dropped
+    info["reattributed_citations"] = sum(1 for v in verified if v["reattributed"])
+    if not verified or len(dropped) > len(verified):
+        return refuse("unsupported_answer")
+
+    sentences = []
+    for v in verified:
+        src = evidence[v["evidence_id"]]
+        sentences.append({"text": v["text"], "citation": {
+            "document_id": src["document_id"], "document_title": src["document_title"],
+            "version_id": src["version_id"], "version_number": src["version_number"],
+            "page_number": src["page_number"], "chunk_id": src["chunk_id"],
+            "quote": v["quote"], "low_confidence": src["low_confidence"]}})
+    return {"status": "answered", "answer": " ".join(s["text"] for s in sentences),
+            "refusal_reason": None, "conflict": bool(data.get("conflict")),
+            "sentences": sentences, **info}
 
     def refuse(reason):
         return {"status": "refused", "answer": REFUSAL_TEXT, "refusal_reason": reason,

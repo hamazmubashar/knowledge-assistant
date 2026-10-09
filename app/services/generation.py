@@ -1,7 +1,9 @@
 import time
 from dataclasses import dataclass
 from typing import Protocol
-
+import hashlib
+import json
+from pathlib import Path
 import httpx
 
 from app.core.config import settings
@@ -14,6 +16,7 @@ class GenerationResult:
     latency_ms: int
     input_tokens: int | None
     output_tokens: int | None
+    cached: bool = False
 
 
 class Generator(Protocol):
@@ -120,3 +123,24 @@ def get_generator(model_name: str | None = None) -> Generator:
     if provider == "gemini":
         return GeminiGenerator(model)
     return OllamaGenerator(model, settings.ollama_base_url, settings.generation_timeout_seconds)
+
+class CachedGenerator:
+    """Evaluation only: replays saved responses so reruns cost no quota."""
+
+    def __init__(self, inner, cache_dir):
+        self.inner = inner
+        self.model_name = inner.model_name
+        self.provider = inner.provider
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    def generate(self, system: str, user: str, schema: dict | None = None) -> GenerationResult:
+        key = hashlib.sha256(json.dumps([self.provider, self.model_name, system, user, schema],
+                                        sort_keys=True).encode()).hexdigest()
+        path = self.cache_dir / f"{key}.json"
+        if path.exists():
+            return GenerationResult(**json.loads(path.read_text()), cached=True)
+        r = self.inner.generate(system, user, schema)
+        path.write_text(json.dumps({"text": r.text, "model": r.model, "latency_ms": r.latency_ms,
+                                    "input_tokens": r.input_tokens, "output_tokens": r.output_tokens}))
+        return r

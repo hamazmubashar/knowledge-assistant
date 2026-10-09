@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
     with SessionLocal() as db:
         app.state.index_id = ensure_active_index(db, app.state.embedder)
     app.state.generator = get_generator()
+    app.state.judge = get_generator(settings.judge_model) if settings.judge_model else None
     yield
 
 

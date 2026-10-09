@@ -18,7 +18,7 @@ class AnswerIn(BaseModel):
 def answer_endpoint(body: AnswerIn, request: Request, db: Session = Depends(get_db),
                     user: User = Depends(get_current_user)):
     s = request.app.state
-    result = answer(db, user, body.question.strip(), s.embedder, s.index_id, s.generator)
+    result = answer(db, user, body.question.strip(), s.embedder, s.index_id, s.generator, judge=s.judge)
     db.add(AuditLog(actor_id=user.id, action="answer", details={
         "status": result["status"], "reason": result["refusal_reason"],
         "sentences": len(result["sentences"])}))
