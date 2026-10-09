@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     answer_max_distance: float = 0.30
     support_check_enabled: bool = True
     answer_min_relevance: float | None = None
+    gemini_api_key: str | None = None
 
 
 settings = Settings()

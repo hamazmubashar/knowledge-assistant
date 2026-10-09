@@ -49,8 +49,74 @@ class OllamaGenerator:
         )
 
 
+class QuotaExhausted(RuntimeError):
+    """Daily free-tier limit reached: stop the run, resume tomorrow."""
+
+
+GEMINI_RPM = {"gemini-3.5-flash-lite": 15, "gemini-3.8-flash": 5,
+              "gemma-4-31b-it": 30, "default": 5}
+_last_call: dict[str, float] = {}
+
+
+def _pace(model: str):
+    rpm = GEMINI_RPM.get(model, GEMINI_RPM["default"])
+    interval = 60 / rpm + 0.5
+    wait = _last_call.get(model, 0) + interval - time.monotonic()
+    if wait > 0:
+        time.sleep(wait)
+    _last_call[model] = time.monotonic()
+
+
+class GeminiGenerator:
+    """Free tier: synthetic documents only (approved by Alex)."""
+
+    def __init__(self, model_name: str):
+        from google import genai
+        if not settings.gemini_api_key:
+            raise RuntimeError("GEMINI_API_KEY is not set")
+        self.model_name = model_name
+        self._client = genai.Client(api_key=settings.gemini_api_key)
+
+    def generate(self, system: str, user: str, schema: dict | None = None) -> GenerationResult:
+        from google.genai import errors, types
+        is_gemma = self.model_name.startswith("gemma")
+        config = types.GenerateContentConfig(
+            system_instruction=None if is_gemma else system,
+            temperature=0,
+            response_mime_type="application/json",
+            response_json_schema=schema,
+            thinking_config=None if is_gemma else types.ThinkingConfig(thinking_level="low"),
+        )
+        contents = f"{system}\n\n{user}" if is_gemma else user
+        for attempt in range(3):
+            _pace(self.model_name)
+            start = time.perf_counter()
+            try:
+                resp = self._client.models.generate_content(
+                    model=self.model_name, contents=contents, config=config)
+                break
+            except errors.ClientError as e:
+                if e.code == 429 and "PerDay" in str(e):
+                    raise QuotaExhausted(f"Daily limit reached for {self.model_name}")
+                if e.code == 429 and attempt < 2:
+                    time.sleep(20 * (attempt + 1))
+                    continue
+                raise
+        usage = resp.usage_metadata
+        output = (usage.candidates_token_count or 0) + (usage.thoughts_token_count or 0)
+        return GenerationResult(
+            text=resp.text or "",
+            model=f"gemini:{self.model_name}",
+            latency_ms=round((time.perf_counter() - start) * 1000),
+            input_tokens=usage.prompt_token_count,
+            output_tokens=output,
+        )
+
+
 def get_generator(model_name: str | None = None) -> Generator:
-    if settings.generation_provider == "ollama":
-        return OllamaGenerator(model_name or settings.generation_model,
-                               settings.ollama_base_url, settings.generation_timeout_seconds)
-    raise ValueError(f"Unknown generation provider: {settings.generation_provider}")
+    name = model_name or settings.generation_model
+    provider, _, model = name.partition(":") if name.startswith(("ollama:", "gemini:")) \
+        else ("ollama", "", name)
+    if provider == "gemini":
+        return GeminiGenerator(model)
+    return OllamaGenerator(model, settings.ollama_base_url, settings.generation_timeout_seconds)
