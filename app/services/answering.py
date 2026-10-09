@@ -1,12 +1,15 @@
 import json
 import re
 import time
+import math
 
 from app.core.config import settings
 from app.services import retrieval
+from app.services.injection import filter_injected, sanitize
 
 REFUSAL_TEXT = "I can't find this in the documents you have access to."
 MIN_QUOTE_WORDS = 3
+_LABEL = re.compile(r"[\{\[\(]?\bSOURCE_\d+\b[\}\]\)]?\s*:?\s*", re.I)
 
 SYSTEM_PROMPT = """You answer employee questions using ONLY the evidence blocks provided.
 Rules:
@@ -95,7 +98,7 @@ def build_prompt(question: str, results: list[dict]) -> str:
 def verify_sentences(sentences: list[dict], evidence: dict) -> tuple[list[dict], list[str]]:
     verified, dropped = [], []
     for s in sentences:
-        text = str(s.get("text", "")).strip()
+        text = _LABEL.sub("", str(s.get("text", ""))).strip()
         eid = str(s.get("evidence_id", "")).strip()
         q = _norm(str(s.get("quote", "")))
         if not text:
@@ -117,7 +120,29 @@ def verify_sentences(sentences: list[dict], evidence: dict) -> tuple[list[dict],
         else:
             dropped.append("quote_not_found" if not matches else "quote_ambiguous")
     return verified, dropped
+def drop_heading_only(sentences: list[dict], evidence: dict) -> tuple[list[dict], int]:
+    kept, removed = [], 0
+    for v in sentences:
+        heading = _norm(evidence[v["evidence_id"]].get("heading") or "")
+        if heading and _norm(v["text"]) == heading:
+            removed += 1
+            continue
+        kept.append(v)
+    return kept, removed
 
+
+def _cosine(a, b) -> float:
+    dot = sum(x * y for x, y in zip(a, b))
+    na, nb = math.sqrt(sum(x * x for x in a)), math.sqrt(sum(y * y for y in b))
+    return dot / (na * nb) if na and nb else 0.0
+
+
+def relevance_scores(question: str, sentences: list[dict], embedder) -> list[float]:
+    if not sentences:
+        return []
+    qv = embedder.embed_query(question)
+    vectors = embedder.embed_documents([s["text"] for s in sentences])
+    return [round(_cosine(qv, v), 3) for v in vectors]
 
 def answer(db, user, question, embedder, index_id, generator, k=5, debug=False) -> dict:
     t0 = time.perf_counter()
@@ -135,8 +160,15 @@ def answer(db, user, question, embedder, index_id, generator, k=5, debug=False) 
     if best is None or best > settings.answer_max_distance:
         return refuse("weak_evidence")
 
-    evidence = {f"SOURCE_{i}": r for i, r in enumerate(results, start=1)}
-    gen = generator.generate(SYSTEM_PROMPT, build_prompt(question, results), SCHEMA)
+    clean_results, redacted = [], 0
+    for r in results:
+        text, n1 = sanitize(r["text"])
+        heading, n2 = sanitize(r["heading"] or "")
+        redacted += n1 + n2
+        clean_results.append({**r, "text": text, "heading": heading or None})
+    info["redacted_sentences"] = redacted
+    evidence = {f"SOURCE_{i}": r for i, r in enumerate(clean_results, start=1)}
+    gen = generator.generate(SYSTEM_PROMPT, build_prompt(question, clean_results), SCHEMA)
     info["generation_ms"] = gen.latency_ms
     info["input_tokens"], info["output_tokens"] = gen.input_tokens, gen.output_tokens
     if debug:
@@ -150,10 +182,20 @@ def answer(db, user, question, embedder, index_id, generator, k=5, debug=False) 
     if not data.get("sentences"):
         return refuse("model_declined")
     verified, dropped = verify_sentences(data.get("sentences") or [], evidence)
+    verified, injected = filter_injected(verified)
+    dropped += ["suspected_injection"] * injected
     if settings.support_check_enabled and verified:
         verified, unsupported, check_ms = support_check(verified, generator)
         dropped += unsupported
         info["support_check_ms"] = check_ms
+    verified, heading_only = drop_heading_only(verified, evidence)
+    dropped += ["heading_only"] * heading_only
+    scores = relevance_scores(question, verified, embedder)
+    info["relevance"] = scores
+    if settings.answer_min_relevance is not None:
+        kept = [v for v, s in zip(verified, scores) if s >= settings.answer_min_relevance]
+        dropped += ["not_relevant"] * (len(verified) - len(kept))
+        verified = kept
     info["dropped_sentences"] = dropped
     info["reattributed_citations"] = sum(1 for v in verified if v["reattributed"])
     if not verified or len(dropped) > len(verified):

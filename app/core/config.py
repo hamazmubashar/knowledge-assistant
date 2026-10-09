@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     generation_timeout_seconds: int = 180
     answer_max_distance: float = 0.30
     support_check_enabled: bool = True
+    answer_min_relevance: float | None = None
 
 
 settings = Settings()

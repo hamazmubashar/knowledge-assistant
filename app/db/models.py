@@ -162,6 +162,7 @@ class Chunk(Base):
     access_group: Mapped[AccessGroup] = mapped_column(enum_col(AccessGroup), index=True)
     extraction_method: Mapped[ExtractionMethod] = mapped_column(enum_col(ExtractionMethod))
     low_confidence: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    suspected_injection: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     search_vector: Mapped[str] = mapped_column(
         TSVECTOR,
         Computed("to_tsvector('english', coalesce(heading, '') || ' ' || text)", persisted=True),

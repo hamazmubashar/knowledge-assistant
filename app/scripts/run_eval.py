@@ -10,7 +10,7 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.db.models import DocumentVersion, Role, User, VersionStatus
 from app.db.session import SessionLocal
-from app.eval.corpus import TITLE_TO_GROUP
+from app.eval.corpus import CORPUS_VERSION, TITLE_TO_GROUP
 from app.services import retrieval
 from app.services.embeddings import ensure_active_index, get_embedder
 
@@ -93,6 +93,7 @@ def main():
     lines = [
         f"# Retrieval evaluation: {args.set} set", "",
         f"- Run: {now.strftime('%Y-%m-%d %H:%M UTC')}",
+        f"- Corpus version: {CORPUS_VERSION}",
         f"- Question file: {qfile.name} (sha256 {hashlib.sha256(raw).hexdigest()[:12]})",
         f"- Embedding model: {embedder.model_name} (index {index_id})",
         f"- k = {args.k}, candidates per search = 20, RRF k = {retrieval.RRF_K}", "",

@@ -1,4 +1,4 @@
-from app.services.answering import build_prompt, verify_sentences
+from app.services.answering import build_prompt, drop_heading_only, verify_sentences
 
 EVIDENCE = {"E1": {"heading": "REFUND PROCEDURE",
                    "text": "Customers may request a full refund within 30 days of purchase."}}
@@ -59,3 +59,16 @@ def test_quote_in_two_blocks_is_rejected_as_ambiguous():
     ok, dropped = verify_sentences([{"text": "x", "evidence_id": "E3",
                                      "quote": "within 30 days of purchase"}], two)
     assert ok == [] and dropped == ["quote_ambiguous"]
+def test_leaked_source_label_is_stripped_from_answer_text():
+    ok, _ = check({"text": "{SOURCE_1}: Customers may request a full refund",
+                   "evidence_id": "E1", "quote": "Customers may request a full refund"})
+    assert len(ok) == 1 and ok[0]["text"] == "Customers may request a full refund"
+
+def test_heading_only_sentence_is_dropped():
+    ev = {"E1": {"heading": "SALARY BANDS 2026", "text": "B | 3,500 - 4,500 | April"}}
+    only_heading = {"text": "SALARY BANDS 2026", "evidence_id": "E1",
+                    "quote": "SALARY BANDS 2026", "reattributed": False}
+    real_answer = {"text": "Band B is 3,500 to 4,500 per month", "evidence_id": "E1",
+                   "quote": "B | 3,500 - 4,500", "reattributed": False}
+    kept, removed = drop_heading_only([only_heading, real_answer], ev)
+    assert kept == [real_answer] and removed == 1

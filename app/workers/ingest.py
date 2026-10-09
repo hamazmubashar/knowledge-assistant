@@ -7,7 +7,7 @@ from datetime import timedelta
 
 import pymupdf
 from sqlalchemy import delete, func, or_, select, update
-
+from app.services.injection import find_injection
 from app.core.config import settings
 from app.db.models import (Chunk, Document, DocumentVersion, Embedding, ExtractionMethod,
                            Page, VersionStatus)
@@ -129,7 +129,8 @@ def process(version_id, attempt, embedder, index_id):
                     page_number=c.page_number, chunk_index=c.chunk_index,
                     heading=c.heading, text=c.text, token_count=c.token_estimate,
                     access_group=group, extraction_method=page_methods[c.page_number],
-                    low_confidence=c.low_confidence))
+                    low_confidence=c.low_confidence,
+                    suspected_injection=bool(find_injection(f"{c.heading or ''} {c.text}"))))
             db.flush()
 
             db.add_all([Embedding(chunk_id=cid, index_id=index_id, embedding=vec)
@@ -144,8 +145,9 @@ def process(version_id, attempt, embedder, index_id):
             v.status = VersionStatus.published
             v.published_at = func.now()
             db.commit()
-        log.info("version %s attempt %s published: %s pages, %s chunks",
-                 version_id, attempt, len(pages), len(chunks))
+        flagged = sum(1 for c in chunks if find_injection(f"{c.heading or ''} {c.text}"))
+        log.info("version %s attempt %s published: %s pages, %s chunks, %s flagged for review",
+                 version_id, attempt, len(pages), len(chunks), flagged)
     except Exception as e:
         with SessionLocal() as db:
             v = owned_version(db, version_id, attempt)

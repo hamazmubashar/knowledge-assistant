@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, Upl
 from sqlalchemy.orm import Session
 from sqlalchemy import update
 from app.db.models import VersionStatus
+from sqlalchemy import func, select
+from app.db.models import Chunk
 
 from app.api.deps import get_current_user
 from app.core.authz import can_manage, ensure_can_view
@@ -75,6 +77,8 @@ def get_version(version_id: uuid.UUID, db: Session = Depends(get_db),
         "version_id": str(v.id), "document_id": str(v.document_id),
         "status": v.status.value, "page_count": v.page_count, "attempts": v.attempts,
         "error_step": v.error_step, "error_message": v.error_message,
+        "flagged_chunks": db.scalar(select(func.count()).select_from(Chunk).where(
+            Chunk.version_id == v.id, Chunk.suspected_injection.is_(True))),
     }
 
 
