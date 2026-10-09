@@ -15,7 +15,8 @@ from app.db.session import SessionLocal
 from app.eval.corpus import CORPUS_VERSION, TITLE_TO_GROUP
 from app.services.answering import answer
 from app.services.embeddings import ensure_active_index, get_embedder
-from app.services.generation import CachedGenerator, QuotaExhausted, get_generator
+from app.services.generation import (CachedGenerator, ProviderUnavailable, QuotaExhausted,
+                                     get_generator)
 
 EVAL_DIR = Path("/code/eval")
 HAS_ANSWER = {"answerable", "injection"}
@@ -132,7 +133,7 @@ def main():
                     print(f"[{model}] {q['id']} {q['type']}: "
                           f"{'answered' if rows[-1]['answered'] else 'refused'}"
                           f" · correct={rows[-1]['correct']} · {rows[-1]['latency_ms']} ms")
-            except QuotaExhausted as e:
+            except (QuotaExhausted, ProviderUnavailable) as e:
                 stopped = f"{e}. Rerun tomorrow: cached responses are reused."
             if rows:
                 results[model] = (rows, summarize(rows))

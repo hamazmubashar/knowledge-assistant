@@ -56,6 +56,9 @@ class OllamaGenerator:
 class QuotaExhausted(RuntimeError):
     """Daily free-tier limit reached: stop the run, resume tomorrow."""
 
+class ProviderUnavailable(RuntimeError):
+    """Provider kept returning server errors: stop or refuse, never guess."""
+
 
 GEMINI_RPM = {"gemini-3.5-flash-lite": 15, "gemini-3.8-flash": 5,
               "gemma-4-31b-it": 30, "default": 5}
@@ -74,6 +77,7 @@ def _pace(model: str):
 class GeminiGenerator:
     provider = "gemini"
     """Free tier: synthetic documents only (approved by Alex)."""
+
     def __init__(self, model_name: str):
         from google import genai
         if not settings.gemini_api_key:
@@ -92,7 +96,7 @@ class GeminiGenerator:
             thinking_config=None if is_gemma else types.ThinkingConfig(thinking_level="low"),
         )
         contents = f"{system}\n\n{user}" if is_gemma else user
-        for attempt in range(3):
+        for attempt in range(4):
             _pace(self.model_name)
             start = time.perf_counter()
             try:
@@ -102,10 +106,16 @@ class GeminiGenerator:
             except errors.ClientError as e:
                 if e.code == 429 and "PerDay" in str(e):
                     raise QuotaExhausted(f"Daily limit reached for {self.model_name}")
-                if e.code == 429 and attempt < 2:
+                if e.code == 429 and attempt < 3:
                     time.sleep(20 * (attempt + 1))
                     continue
                 raise
+            except errors.ServerError as e:
+                if attempt < 3:
+                    time.sleep(15 * (attempt + 1))
+                    continue
+                raise ProviderUnavailable(
+                    f"{self.model_name} returned server error {e.code} after 4 attempts")
         usage = resp.usage_metadata
         output = (usage.candidates_token_count or 0) + (usage.thoughts_token_count or 0)
         return GenerationResult(
