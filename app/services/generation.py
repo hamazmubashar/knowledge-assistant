@@ -25,6 +25,7 @@ class Generator(Protocol):
 
 
 class OllamaGenerator:
+    provider = "ollama"
     """Local development and evaluation only. Synthetic documents only."""
 
     def __init__(self, model_name: str, base_url: str, timeout: int):
@@ -71,8 +72,8 @@ def _pace(model: str):
 
 
 class GeminiGenerator:
+    provider = "gemini"
     """Free tier: synthetic documents only (approved by Alex)."""
-
     def __init__(self, model_name: str):
         from google import genai
         if not settings.gemini_api_key:

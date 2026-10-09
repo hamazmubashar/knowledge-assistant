@@ -92,3 +92,8 @@ def test_verbatim_claim_is_kept_without_asking_the_model():
     same = {**S, "text": "Full-time staff receive 20 days"}
     kept, dropped, _ = support_check([same], gen)
     assert kept == [same] and dropped == [] and gen.calls == 0
+
+def test_real_generators_declare_their_provider():
+    from app.services.generation import GeminiGenerator, OllamaGenerator
+    assert OllamaGenerator.provider == "ollama"
+    assert GeminiGenerator.provider == "gemini"
