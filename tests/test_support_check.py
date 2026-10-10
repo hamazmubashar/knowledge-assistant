@@ -97,3 +97,25 @@ def test_real_generators_declare_their_provider():
     from app.services.generation import GeminiGenerator, OllamaGenerator
     assert OllamaGenerator.provider == "ollama"
     assert GeminiGenerator.provider == "gemini"
+
+def test_judge_outage_removes_sentence_and_continues():
+    from app.services.generation import ProviderUnavailable
+
+    class BrokenJudge(FakeGenerator):
+        def generate(self, system, user, schema=None):
+            raise ProviderUnavailable("down")
+
+    kept, dropped, _ = relevance_check("q", [S, S], BrokenJudge("x"))
+    assert kept == [] and dropped == ["judge_error", "judge_error"]
+
+
+def test_fallback_judge_used_when_candidate_is_the_judge():
+    from app.services.answering import pick_judge
+    candidate = FakeGenerator("x")
+    main_judge = FakeGenerator("x")
+    fallback = FakeGenerator("x")
+    fallback.model_name = "fallback-model"
+    assert pick_judge(candidate, main_judge, fallback) is fallback
+    other = FakeGenerator("x")
+    other.model_name = "other"
+    assert pick_judge(other, main_judge, fallback) is main_judge

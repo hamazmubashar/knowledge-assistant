@@ -2,7 +2,9 @@ import json
 import re
 import time
 import math
+import httpx
 
+from app.services.generation import ProviderUnavailable
 from app.core.config import settings
 from app.services import retrieval
 from app.services.injection import filter_injected, sanitize
@@ -67,8 +69,12 @@ def support_check(sentences: list[dict], judge) -> tuple[list[dict], list[str], 
         if judge is None:
             dropped.append("unverified_no_judge")
             continue
-        gen = judge.generate(SUPPORT_SYSTEM, f"Claim: {v['text']}\nQuote: {v['quote']}",
-                             SUPPORT_SCHEMA)
+        try:
+            gen = judge.generate(SUPPORT_SYSTEM, f"Claim: {v['text']}\nQuote: {v['quote']}",
+                                 SUPPORT_SCHEMA)
+        except (ProviderUnavailable, httpx.HTTPError):
+            dropped.append("judge_error")
+            continue
         total_ms += gen.latency_ms
         try:
             ok = json.loads(gen.text).get("supported") is True
@@ -93,8 +99,13 @@ RELEVANCE_SCHEMA = {"type": "object",
 def relevance_check(question: str, sentences: list[dict], judge) -> tuple[list[dict], list[str], int]:
     kept, dropped, total_ms = [], [], 0
     for v in sentences:
-        gen = judge.generate(RELEVANCE_SYSTEM,
-                             f"Question: {question}\nAnswer sentence: {v['text']}", RELEVANCE_SCHEMA)
+        try:
+            gen = judge.generate(RELEVANCE_SYSTEM,
+                                 f"Question: {question}\nAnswer sentence: {v['text']}",
+                                 RELEVANCE_SCHEMA)
+        except (ProviderUnavailable, httpx.HTTPError):
+            dropped.append("judge_error")
+            continue
         total_ms += gen.latency_ms
         try:
             ok = json.loads(gen.text).get("relevant") is True
@@ -107,12 +118,20 @@ def relevance_check(question: str, sentences: list[dict], judge) -> tuple[list[d
     return kept, dropped, total_ms
 
 
+def same_model(a, b) -> bool:
+    return (getattr(a, "provider", None), a.model_name) == (getattr(b, "provider", None), b.model_name)
+
+
 def ensure_independent_judge(generator, judge) -> None:
-    if judge is None:
-        return
-    if (getattr(judge, "provider", None), judge.model_name) == \
-            (getattr(generator, "provider", None), generator.model_name):
+    if judge is not None and same_model(generator, judge):
         raise ValueError("The judge model must differ from the answer model")
+
+
+def pick_judge(generator, judge, fallback):
+    """Use the main judge unless it is the candidate itself; then use the fallback."""
+    if judge is not None and same_model(generator, judge):
+        return fallback
+    return judge
 
 def _norm(s: str) -> str:
     return " ".join(re.sub(r"[^\w\s]", " ", s.lower()).split())

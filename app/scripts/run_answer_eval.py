@@ -6,7 +6,7 @@ import statistics
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-
+from app.services.answering import answer, pick_judge
 from sqlalchemy import select
 
 from app.core.config import settings
@@ -111,6 +111,7 @@ def main():
     ap.add_argument("--set", choices=["dev", "heldout"], required=True)
     ap.add_argument("--models", default=settings.generation_model)
     ap.add_argument("--judge", default=settings.judge_model or "none")
+    ap.add_argument("--fallback-judge", default=settings.fallback_judge_model or "none")
     args = ap.parse_args()
 
     qfile = EVAL_DIR / f"answers_{args.set}.json"
@@ -120,15 +121,20 @@ def main():
     models = [m.strip() for m in args.models.split(",")]
     results, stopped = {}, None
     judge = None if args.judge == "none" else make_generator(args.judge)
+    fallback = None if args.fallback_judge == "none" else make_generator(args.fallback_judge)
+    judges_used = {}
     with SessionLocal() as db:
         index_id = ensure_active_index(db, embedder)
         users = {r: eval_user(db, r) for r in ("support", "operations", "hr")}
         for model in models:
             gen = make_generator(model)
+            model_judge = pick_judge(gen, judge, fallback)
+            judges_used[model] = model_judge.model_name if model_judge else "none"
             rows = []
             try:
                 for q in questions:
-                    r = answer(db, users[q["role"]], q["question"], embedder, index_id, gen, judge=judge)
+                    r = answer(db, users[q["role"]], q["question"], embedder, index_id, gen,
+                               judge=model_judge)
                     rows.append(score(q, r))
                     print(f"[{model}] {q['id']} {q['type']}: "
                           f"{'answered' if rows[-1]['answered'] else 'refused'}"
@@ -147,7 +153,8 @@ def main():
              f"- Corpus version: {CORPUS_VERSION}",
              f"- Question file: {qfile.name} (sha256 {hashlib.sha256(raw).hexdigest()[:12]})",
              f"- Embedding model: {embedder.model_name}; evidence threshold: {settings.answer_max_distance}",
-             f"- Judge (support + relevance): {args.judge}; never the answer model",
+             "- Judges: " + "; ".join(f"{m} → {j}" for m, j in judges_used.items())
+             + " (never the answer model)",
              f"- **Incomplete run:** {stopped}" if stopped else "- Run complete",
              f"- Relevance gate: {settings.answer_min_relevance if settings.answer_min_relevance is not None else 'off (logging only)'}",
              "- Scoring: deterministic keyword facts + citation page match; no AI grader", "",

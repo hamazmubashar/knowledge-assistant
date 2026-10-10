@@ -26,7 +26,8 @@ class Settings(BaseSettings):
     support_check_enabled: bool = True
     answer_min_relevance: float | None = None
     gemini_api_key: str | None = None
-    judge_model: str | None = "gemini:gemma-4-31b-it"
+    judge_model: str | None = "gemini:gemini-3.5-flash-lite"
+    fallback_judge_model: str | None = "qwen2.5:3b"
     relevance_check_enabled: bool = True
 
 
