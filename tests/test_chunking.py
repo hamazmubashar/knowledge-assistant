@@ -49,3 +49,26 @@ def test_ocr_pages_without_confidence_are_flagged():
     chunks = chunk_pages([PageInput(1, "Scanned text here.", is_ocr=True),
                           PageInput(2, "Typed text here.")])
     assert [c.low_confidence for c in chunks] == [True, False]
+
+def test_table_rows_are_content_not_headings():
+    text = "SALARY BANDS 2026\nBand | Monthly range | Review month\nA | 2,500 - 3,500 | April\nB | 3,500 - 4,500 | April"
+    chunks = chunk_pages([PageInput(1, text)])
+    assert len(chunks) == 1
+    assert chunks[0].heading == "SALARY BANDS 2026"
+    assert "\nB | 3,500 - 4,500 | April" in chunks[0].text
+
+
+def test_consecutive_headings_are_joined_not_lost():
+    text = "ANNUAL LEAVE POLICY\n1. Entitlement\nStaff receive 20 days of leave."
+    chunks = chunk_pages([PageInput(1, text)])
+    assert chunks[0].heading == "ANNUAL LEAVE POLICY > 1. Entitlement"
+
+
+def test_no_line_is_ever_lost():
+    pages = [PageInput(1, "SALARY BANDS 2026\nBand | Range\nA | 2,500\nB | 3,500\nC | 4,000"),
+             PageInput(2, "1. Scope\nApplies to all staff.\n2. Leave\n3. Notes\nSee HR portal.")]
+    chunks = chunk_pages(pages)
+    stored = " ".join(f"{c.heading or ''} {c.text}" for c in chunks)
+    for page in pages:
+        for line in page.text.splitlines():
+            assert line.strip() in stored, f"lost: {line}"

@@ -33,6 +33,8 @@ def is_heading(line: str) -> bool:
     s = line.strip()
     if not s or len(s) > 80 or len(s.split()) > 12:
         return False
+    if "|" in s:
+        return False
     if s.endswith((".", ",", ";")):
         return False
     if s.endswith(":") or _NUMBERED.match(s):
@@ -44,23 +46,38 @@ def is_heading(line: str) -> bool:
     return len(words) >= 2 and all(w[0].isupper() for w in words)
 
 
+def _count(lines: list[str]) -> int:
+    return sum(len(line.split()) for line in lines)
+
+
+def _overlap(lines: list[str]) -> list[str]:
+    kept, n = [], 0
+    for line in reversed(lines):
+        n += len(line.split())
+        if n > OVERLAP_WORDS:
+            break
+        kept.insert(0, line)
+    return kept
+
+
 def chunk_pages(pages: list[PageInput]) -> list[ChunkOut]:
     out: list[ChunkOut] = []
     heading: str | None = None
+    heading_open = False
 
     for page in pages:
         low = page.is_ocr and (page.ocr_confidence is None
                                or page.ocr_confidence < LOW_OCR_CONFIDENCE)
-        words: list[str] = []
+        lines: list[str] = []
         fresh = 0
         chunk_heading = heading
 
-        def emit(ws):
+        def emit(ls):
+            wc = _count(ls)
             out.append(ChunkOut(
-                page_number=page.page_number, chunk_index=len(out),
-                heading=chunk_heading, text=" ".join(ws), word_count=len(ws),
-                token_estimate=round(len(ws) * TOKENS_PER_WORD), low_confidence=low,
-            ))
+                page_number=page.page_number, chunk_index=len(out), heading=chunk_heading,
+                text="\n".join(ls), word_count=wc,
+                token_estimate=round(wc * TOKENS_PER_WORD), low_confidence=low))
 
         for raw in page.text.splitlines():
             line = raw.strip()
@@ -68,22 +85,30 @@ def chunk_pages(pages: list[PageInput]) -> list[ChunkOut]:
                 continue
             if is_heading(line):
                 if fresh:
-                    emit(words)
-                words, fresh = [], 0
-                heading = chunk_heading = line
-                continue
-            line_words = line.split()
-            if fresh and len(words) + len(line_words) > TARGET_WORDS:
-                emit(words)
-                words, fresh = words[-OVERLAP_WORDS:], 0
+                    emit(lines)
+                lines, fresh = [], 0
+                heading = f"{heading} > {line}" if heading_open and heading else line
                 chunk_heading = heading
-            words += line_words
-            fresh += len(line_words)
-            while len(words) > MAX_WORDS:
-                emit(words[:MAX_WORDS])
-                words = words[MAX_WORDS - OVERLAP_WORDS:]
-                fresh = max(0, len(words) - OVERLAP_WORDS)
+                heading_open = True
+                continue
+            heading_open = False
+            words = line.split()
+            if len(words) > MAX_WORDS:
+                if fresh:
+                    emit(lines)
+                for i in range(0, len(words), MAX_WORDS - OVERLAP_WORDS):
+                    emit([" ".join(words[i:i + MAX_WORDS])])
+                lines, fresh = [], 0
+                continue
+            if fresh and _count(lines) + len(words) > TARGET_WORDS:
+                emit(lines)
+                lines, fresh = _overlap(lines), 0
+                chunk_heading = heading
+            if not fresh and _count(lines) + len(words) > MAX_WORDS:
+                lines = []
+            lines.append(line)
+            fresh += len(words)
         if fresh:
-            emit(words)
+            emit(lines)
 
     return out
