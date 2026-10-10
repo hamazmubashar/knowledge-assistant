@@ -3,63 +3,143 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
   <title>Knowledge Assistant</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header>
-    <h1>Knowledge Assistant</h1>
-    <div id="whoami" hidden>
-      <span id="user-label"></span>
-      <button id="logout" type="button">Log out</button>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" data-icon="shield"></span>
+      <span class="brand-name">Knowledge Assistant</span>
+      <span class="pill pill-quiet brand-tag">Internal</span>
+    </div>
+    <div id="whoami" class="whoami" hidden>
+      <span class="user-pill">
+        <span class="avatar" id="avatar" aria-hidden="true"></span>
+        <span class="user-email" id="user-email"></span>
+        <span class="role-tag" id="user-role"></span>
+      </span>
+      <button id="logout" class="icon-btn" type="button" aria-label="Sign out" title="Sign out">
+        <span data-icon="logout"></span>
+      </button>
     </div>
   </header>
-  <main>
-    <section id="login-view">
-      <h2>Sign in</h2>
-      <form id="login-form">
-        <label>Email <input id="email" type="email" required autocomplete="username"></label>
-        <label>Password <input id="password" type="password" required autocomplete="current-password"></label>
-        <button type="submit">Sign in</button>
-        <p id="login-error" class="error" role="alert"></p>
-      </form>
+
+  <main class="shell">
+    <!-- Sign in -->
+    <section id="login-view" class="login">
+      <div class="card login-card">
+        <span class="logo logo-lg" data-icon="shield"></span>
+        <h1>Sign in</h1>
+        <p class="muted">Answers come only from documents your role can access, with a cited page for every sentence.</p>
+        <form id="login-form">
+          <label class="field">
+            <span class="field-label">Work email</span>
+            <input id="email" type="email" required autocomplete="username" placeholder="name@company.com">
+          </label>
+          <label class="field">
+            <span class="field-label">Password</span>
+            <input id="password" type="password" required autocomplete="current-password">
+          </label>
+          <button id="login-btn" class="btn btn-primary btn-block" type="submit">Sign in</button>
+          <p id="login-error" class="form-error" role="alert"></p>
+        </form>
+      </div>
     </section>
 
+    <!-- Signed in -->
     <section id="app-view" hidden>
-      <nav>
-        <button class="tab active" data-tab="ask" type="button">Ask</button>
-        <button class="tab" data-tab="docs" type="button" id="docs-tab" hidden>Documents</button>
-      </nav>
-
-      <div id="ask-panel">
-        <form id="ask-form">
-          <label for="question">Your question</label>
-          <textarea id="question" rows="3" maxlength="500" required></textarea>
-          <button type="submit" id="ask-btn">Ask</button>
-        </form>
-        <div id="answer" aria-live="polite"></div>
+      <div class="toolbar">
+        <nav class="seg" role="tablist" aria-label="Sections">
+          <button class="seg-btn active" data-tab="ask" role="tab" aria-selected="true" type="button">
+            <span data-icon="search"></span>Ask
+          </button>
+          <button class="seg-btn" data-tab="docs" role="tab" aria-selected="false" type="button" id="docs-tab" hidden>
+            <span data-icon="folder"></span>Documents
+          </button>
+        </nav>
+        <div class="scope" title="Document groups your role can read">
+          <span data-icon="lock" class="scope-icon"></span>
+          <span class="scope-label">Searching</span>
+          <span id="scope-groups" class="scope-groups"></span>
+        </div>
       </div>
 
-      <div id="docs-panel" hidden>
-        <form id="upload-form">
-          <h2>Upload a document</h2>
-          <label>Title <input id="doc-title" required maxlength="500"></label>
-          <label>Access group <select id="doc-group"></select></label>
-          <label>PDF file <input id="doc-file" type="file" accept="application/pdf" required></label>
-          <button type="submit">Upload</button>
-          <p id="upload-msg" role="status"></p>
+      <div id="ask-panel" role="tabpanel">
+        <form id="ask-form" class="card input-card">
+          <label for="question" class="eyebrow">Ask a question</label>
+          <textarea id="question" rows="3" maxlength="500" required
+            placeholder="e.g. How many days of annual leave do full-time staff get?"></textarea>
+          <div class="input-footer">
+            <span id="counter" class="counter">0 / 500</span>
+            <span class="hint"><kbd id="kbd-mod">Ctrl</kbd><kbd>Enter</kbd><span class="hint-text">to send</span></span>
+            <button id="ask-btn" class="btn btn-primary" type="submit">
+              <span>Ask Assistant</span><span data-icon="arrowRight"></span>
+            </button>
+          </div>
         </form>
-        <div class="row">
-          <h2>Documents</h2>
-          <button id="refresh-docs" type="button">Refresh</button>
+        <div id="answer" class="answer-area" aria-live="polite"></div>
+      </div>
+
+      <div id="docs-panel" role="tabpanel" hidden>
+        <form id="upload-form" class="card" novalidate>
+          <div class="card-head">
+            <div>
+              <h2>Upload a document</h2>
+              <p class="muted small">PDF, up to 50 MB. Text is extracted, checked for completeness and indexed before it becomes searchable.</p>
+            </div>
+          </div>
+          <div class="upload-grid">
+            <label class="field">
+              <span class="field-label">Title</span>
+              <input id="doc-title" maxlength="500" placeholder="e.g. Annual Leave Policy">
+            </label>
+            <label class="field">
+              <span class="field-label">Access group</span>
+              <select id="doc-group"></select>
+            </label>
+          </div>
+          <label class="dropzone" id="dropzone">
+            <input id="doc-file" type="file" accept="application/pdf,.pdf" class="sr-only">
+            <span class="dz-icon" data-icon="upload"></span>
+            <span class="dz-text" id="drop-text">Drop a PDF here or <span class="link">browse</span></span>
+            <span class="dz-sub" id="drop-sub">Only people in the selected group will be able to search it.</span>
+          </label>
+          <div class="form-actions">
+            <p id="upload-msg" class="form-msg" role="status"></p>
+            <button id="upload-btn" class="btn btn-primary" type="submit">
+              <span data-icon="upload"></span><span>Upload</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>Documents</h2>
+              <p class="muted small" id="docs-summary"></p>
+            </div>
+            <button id="refresh-docs" class="btn btn-ghost" type="button">
+              <span data-icon="refresh"></span><span>Refresh</span>
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table id="docs-table">
+              <thead>
+                <tr><th>Document</th><th>Group</th><th>Version</th><th>Status</th><th class="num">Pages</th><th><span class="sr-only">Actions</span></th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p id="docs-empty" class="empty-row" hidden>No documents yet. Upload a PDF to get started.</p>
         </div>
-        <table id="docs-table">
-          <thead><tr><th>Title</th><th>Group</th><th>Version</th><th>Status</th><th>Pages</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
       </div>
     </section>
   </main>
+
   <script src="/static/app.js"></script>
 </body>
 </html>
