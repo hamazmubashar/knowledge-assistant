@@ -1,4 +1,22 @@
 from app.services.chunking import MAX_WORDS, PageInput, chunk_pages
+from app.services.chunking import ChunkOut, missing_lines
+
+
+def test_completeness_check_passes_when_nothing_is_lost():
+    pages = [PageInput(1, "SALARY BANDS 2026\nA | 2,500 - 3,500\nB | 3,500 - 4,500")]
+    assert missing_lines(pages, chunk_pages(pages)) == []
+
+
+def test_completeness_check_detects_a_dropped_line():
+    pages = [PageInput(1, "SALARY BANDS 2026\nA | 2,500 - 3,500\nB | 3,500 - 4,500")]
+    broken = [ChunkOut(1, 0, "SALARY BANDS 2026", "A | 2,500 - 3,500", 4, 5, False)]
+    assert missing_lines(pages, broken) == ["B | 3,500 - 4,500"]
+
+
+def test_completeness_check_handles_very_long_lines():
+    long_line = " ".join(f"word{i}" for i in range(400))
+    pages = [PageInput(1, long_line)]
+    assert missing_lines(pages, chunk_pages(pages)) == []
 
 
 def test_chunks_never_cross_pages():
@@ -72,3 +90,21 @@ def test_no_line_is_ever_lost():
     for page in pages:
         for line in page.text.splitlines():
             assert line.strip() in stored, f"lost: {line}"
+
+
+
+def test_completeness_check_passes_when_nothing_is_lost():
+    pages = [PageInput(1, "SALARY BANDS 2026\nA | 2,500 - 3,500\nB | 3,500 - 4,500")]
+    assert missing_lines(pages, chunk_pages(pages)) == []
+
+
+def test_completeness_check_detects_a_dropped_line():
+    pages = [PageInput(1, "SALARY BANDS 2026\nA | 2,500 - 3,500\nB | 3,500 - 4,500")]
+    broken = [ChunkOut(1, 0, "SALARY BANDS 2026", "A | 2,500 - 3,500", 4, 5, False)]
+    assert missing_lines(pages, broken) == ["B | 3,500 - 4,500"]
+
+
+def test_completeness_check_handles_very_long_lines():
+    long_line = " ".join(f"word{i}" for i in range(400))
+    pages = [PageInput(1, long_line)]
+    assert missing_lines(pages, chunk_pages(pages)) == []

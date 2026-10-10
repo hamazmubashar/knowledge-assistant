@@ -13,7 +13,6 @@ from app.core.config import settings
 from app.db.models import Role, User
 from app.db.session import SessionLocal
 from app.eval.corpus import CORPUS_VERSION, TITLE_TO_GROUP
-from app.services.answering import answer
 from app.services.embeddings import ensure_active_index, get_embedder
 from app.services.generation import (CachedGenerator, ProviderUnavailable, QuotaExhausted,
                                      get_generator)

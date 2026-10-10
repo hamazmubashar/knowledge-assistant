@@ -112,3 +112,28 @@ def chunk_pages(pages: list[PageInput]) -> list[ChunkOut]:
             emit(lines)
 
     return out
+
+class ContentLoss(RuntimeError):
+    """Chunking lost page content: the version must not be published."""
+
+
+def _norm_ws(s: str) -> str:
+    return " ".join(s.split())
+
+
+def missing_lines(pages: list[PageInput], chunks: list[ChunkOut]) -> list[str]:
+    stored = _norm_ws(" ".join(f"{c.heading or ''} {c.text}" for c in chunks))
+    stored_words = set(stored.split())
+    lost = []
+    for page in pages:
+        for raw in page.text.splitlines():
+            line = _norm_ws(raw)
+            if not line:
+                continue
+            words = line.split()
+            if len(words) > MAX_WORDS:
+                if not set(words) <= stored_words:
+                    lost.append(line)
+            elif line not in stored:
+                lost.append(line)
+    return lost

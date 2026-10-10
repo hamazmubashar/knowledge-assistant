@@ -13,7 +13,7 @@ from app.db.models import (Chunk, Document, DocumentVersion, Embedding, Extracti
                            Page, VersionStatus)
 from app.db.session import SessionLocal
 from app.services import storage
-from app.services.chunking import PageInput, chunk_pages
+from app.services.chunking import ContentLoss, PageInput, chunk_pages, missing_lines
 from app.services.embeddings import ensure_active_index, get_embedder
 from app.services.ocr import get_ocr_provider
 
@@ -94,8 +94,13 @@ def process(version_id, attempt, embedder, index_id):
                 pages.append((n, text, method))
 
         step = "chunk"
-        chunks = chunk_pages([PageInput(n, t, is_ocr=(m == ExtractionMethod.ocr))
-                              for n, t, m in pages])
+        page_inputs = [PageInput(n, t, is_ocr=(m == ExtractionMethod.ocr)) for n, t, m in pages]
+        chunks = chunk_pages(page_inputs)
+        step = "chunk_completeness"
+        lost = missing_lines(page_inputs, chunks)
+        if lost:
+            log.error("version %s: %s lines lost during chunking", version_id, len(lost))
+            raise ContentLoss(f"{len(lost)} lines lost")
 
         step = "embed"
         vectors = embedder.embed_documents(
