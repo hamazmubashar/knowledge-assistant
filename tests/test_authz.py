@@ -100,3 +100,26 @@ def test_guessed_version_id_returns_404(env):
     client, _, hr, _ = env
     r = client.get(f"/versions/{uuid.uuid4()}", headers=auth(client, hr))
     assert r.status_code == 404
+
+def test_document_list_respects_permissions(env):
+    client, vid, hr, support = env
+
+    def version_ids(email):
+        docs = client.get("/documents", headers=auth(client, email)).json()
+        return [v["version_id"] for d in docs for v in d["versions"]]
+
+    assert vid in version_ids(hr)
+    assert vid not in version_ids(support)
+
+
+def test_me_reports_role_without_admin_rights(env):
+    client, _, _, support = env
+    body = client.get("/me", headers=auth(client, support)).json()
+    assert body["role"] == "support" and body["admin_groups"] == []
+
+
+def test_ui_is_served_with_security_headers(env):
+    client, _, _, _ = env
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "script-src 'self'" in r.headers["content-security-policy"]

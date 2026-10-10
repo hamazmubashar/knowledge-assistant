@@ -7,7 +7,7 @@ from sqlalchemy import update
 from app.db.models import VersionStatus
 from sqlalchemy import func, select
 from app.db.models import Chunk
-
+from app.core.authz import admin_groups, allowed_groups, can_manage, ensure_can_view
 from app.api.deps import get_current_user
 from app.core.authz import can_manage, ensure_can_view
 from app.core.config import settings
@@ -116,3 +116,26 @@ def retry_version(version_id: uuid.UUID, db: Session = Depends(get_db),
                     target_type="document_version", target_id=str(version_id)))
     db.commit()
     return {"version_id": str(version_id), "status": "queued"}
+
+@router.get("/documents")
+def list_documents(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    groups = allowed_groups(db, user)
+    if not groups:
+        return []
+    manageable = admin_groups(db, user)
+    docs = db.scalars(select(Document)
+                      .where(Document.is_deleted.is_(False), Document.access_group.in_(groups))
+                      .order_by(Document.created_at.desc()).limit(200)).all()
+    out = []
+    for d in docs:
+        versions = db.scalars(select(DocumentVersion)
+                              .where(DocumentVersion.document_id == d.id)
+                              .order_by(DocumentVersion.version_number.desc())).all()
+        out.append({"document_id": str(d.id), "title": d.title,
+                    "access_group": d.access_group.value,
+                    "can_manage": d.access_group in manageable,
+                    "versions": [{"version_id": str(v.id), "version_number": v.version_number,
+                                  "status": v.status.value, "page_count": v.page_count,
+                                  "error_step": v.error_step, "error_message": v.error_message}
+                                 for v in versions]})
+    return out

@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
-
+from pathlib import Path
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import boto3
 import psycopg
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from app.api import answer, auth, documents, search
+from app.api import answer, auth, documents, me, search
 from app.db.session import SessionLocal
 from app.services.embeddings import ensure_active_index, get_embedder
 from app.core.config import settings
@@ -28,6 +30,28 @@ app.include_router(documents.router)
 app.include_router(auth.router)
 app.include_router(search.router)
 app.include_router(answer.router)
+app.include_router(me.router)
+
+STATIC = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+UI_CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; "
+          "object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+
+
+@app.middleware("http")
+async def ui_security_headers(request, call_next):
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static"):
+        response.headers["Content-Security-Policy"] = UI_CSP
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
+@app.get("/", include_in_schema=False)
+def ui():
+    return FileResponse(STATIC / "index.html")
 
 @app.get("/health/live")
 def live():

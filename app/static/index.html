@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Knowledge Assistant</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Knowledge Assistant</h1>
+    <div id="whoami" hidden>
+      <span id="user-label"></span>
+      <button id="logout" type="button">Log out</button>
+    </div>
+  </header>
+  <main>
+    <section id="login-view">
+      <h2>Sign in</h2>
+      <form id="login-form">
+        <label>Email <input id="email" type="email" required autocomplete="username"></label>
+        <label>Password <input id="password" type="password" required autocomplete="current-password"></label>
+        <button type="submit">Sign in</button>
+        <p id="login-error" class="error" role="alert"></p>
+      </form>
+    </section>
+
+    <section id="app-view" hidden>
+      <nav>
+        <button class="tab active" data-tab="ask" type="button">Ask</button>
+        <button class="tab" data-tab="docs" type="button" id="docs-tab" hidden>Documents</button>
+      </nav>
+
+      <div id="ask-panel">
+        <form id="ask-form">
+          <label for="question">Your question</label>
+          <textarea id="question" rows="3" maxlength="500" required></textarea>
+          <button type="submit" id="ask-btn">Ask</button>
+        </form>
+        <div id="answer" aria-live="polite"></div>
+      </div>
+
+      <div id="docs-panel" hidden>
+        <form id="upload-form">
+          <h2>Upload a document</h2>
+          <label>Title <input id="doc-title" required maxlength="500"></label>
+          <label>Access group <select id="doc-group"></select></label>
+          <label>PDF file <input id="doc-file" type="file" accept="application/pdf" required></label>
+          <button type="submit">Upload</button>
+          <p id="upload-msg" role="status"></p>
+        </form>
+        <div class="row">
+          <h2>Documents</h2>
+          <button id="refresh-docs" type="button">Refresh</button>
+        </div>
+        <table id="docs-table">
+          <thead><tr><th>Title</th><th>Group</th><th>Version</th><th>Status</th><th>Pages</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
