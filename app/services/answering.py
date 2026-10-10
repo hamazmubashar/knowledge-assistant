@@ -175,6 +175,59 @@ def verify_sentences(sentences: list[dict], evidence: dict) -> tuple[list[dict],
         else:
             dropped.append("quote_not_found" if not matches else "quote_ambiguous")
     return verified, dropped
+
+
+def _strip_prefix(text: str, heading: str, capitalize: bool = True) -> str | None:
+    """Return text without a leading copy of heading, or None if it does not start with one.
+
+    Only strips when the copy is clearly a heading: written in capitals, or followed by a
+    line break or colon. "Probation lasts 6 months." keeps its first word.
+    """
+    words = re.findall(r"\w+", heading)
+    if not words:
+        return None
+    m = re.match(r"\W*" + r"\W+".join(map(re.escape, words)) + r"(?P<sep>\W+)", text, re.I)
+    if not m:
+        return None
+    copied = text[:m.start("sep")]
+    if not (copied.isupper() or "\n" in m.group("sep") or ":" in m.group("sep")):
+        return None
+    rest = text[m.end():].strip()
+    if len(rest.split()) < MIN_QUOTE_WORDS:
+        return None                      # heading-only sentence: drop_heading_only handles it
+    return rest[0].upper() + rest[1:] if capitalize else rest
+
+
+def strip_copied_headings(sentences: list[dict], evidence: dict) -> tuple[list[dict], int]:
+    """Remove section headings the model copied into the start of a sentence or quote.
+
+    The quote stays a word-for-word substring of the evidence, so verification still holds.
+    """
+    out, stripped = [], 0
+    for v in sentences:
+        src = evidence[v["evidence_id"]]
+        heading = src.get("heading") or ""
+        parts = [p.strip() for p in heading.split(">")] + [heading]
+        first_line = (src.get("text") or "").lstrip().split("\n", 1)[0].strip()
+        if first_line.isupper() and len(first_line.split()) <= 8:
+            parts.append(first_line)         # a heading the chunker kept inside the text
+        candidates = sorted({p for p in parts if p}, key=len, reverse=True)
+        text, quote, changed = v["text"], v["quote"], False
+        for h in candidates:
+            new_text = _strip_prefix(text, h)
+            if new_text is not None:
+                text, changed = new_text, True
+                break
+        for h in candidates:
+            new_quote = _strip_prefix(quote, h, capitalize=False)   # quote stays word for word
+            if new_quote is not None:
+                quote = new_quote
+                break
+        stripped += changed
+        out.append({**v, "text": text, "quote": quote})
+    return out, stripped
+
+
 def drop_heading_only(sentences: list[dict], evidence: dict) -> tuple[list[dict], int]:
     kept, removed = [], 0
     for v in sentences:
@@ -198,6 +251,8 @@ def relevance_scores(question: str, sentences: list[dict], embedder) -> list[flo
     qv = embedder.embed_query(question)
     vectors = embedder.embed_documents([s["text"] for s in sentences])
     return [round(_cosine(qv, v), 3) for v in vectors]
+
+
 def answer(db, user, question, embedder, index_id, generator, k=5, debug=False, judge=None) -> dict:
     ensure_independent_judge(generator, judge)
     t0 = time.perf_counter()
@@ -242,6 +297,7 @@ def answer(db, user, question, embedder, index_id, generator, k=5, debug=False, 
     verified, dropped = verify_sentences(data.get("sentences") or [], evidence)
     verified, injected = filter_injected(verified)
     dropped += ["suspected_injection"] * injected
+    verified, info["stripped_headings"] = strip_copied_headings(verified, evidence)
     verified, heading_only = drop_heading_only(verified, evidence)
     dropped += ["heading_only"] * heading_only
     if settings.support_check_enabled and verified:
@@ -253,66 +309,6 @@ def answer(db, user, question, embedder, index_id, generator, k=5, debug=False, 
         dropped += irrelevant
         info["judge_ms"] += ms
     info["relevance"] = relevance_scores(question, verified, embedder)
-    info["dropped_sentences"] = dropped
-    info["reattributed_citations"] = sum(1 for v in verified if v["reattributed"])
-    if not verified or len(dropped) > len(verified):
-        return refuse("unsupported_answer")
-
-    sentences = []
-    for v in verified:
-        src = evidence[v["evidence_id"]]
-        sentences.append({"text": v["text"], "citation": {
-            "document_id": src["document_id"], "document_title": src["document_title"],
-            "version_id": src["version_id"], "version_number": src["version_number"],
-            "page_number": src["page_number"], "chunk_id": src["chunk_id"],
-            "quote": v["quote"], "low_confidence": src["low_confidence"]}})
-    return {"status": "answered", "answer": " ".join(s["text"] for s in sentences),
-            "refusal_reason": None, "conflict": bool(data.get("conflict")),
-            "sentences": sentences, **info}
-
-    def refuse(reason):
-        return {"status": "refused", "answer": REFUSAL_TEXT, "refusal_reason": reason,
-                "conflict": False, "sentences": [], **info}
-
-    if best is None or best > settings.answer_max_distance:
-        return refuse("weak_evidence")
-
-    clean_results, redacted = [], 0
-    for r in results:
-        text, n1 = sanitize(r["text"])
-        heading, n2 = sanitize(r["heading"] or "")
-        redacted += n1 + n2
-        clean_results.append({**r, "text": text, "heading": heading or None})
-    info["redacted_sentences"] = redacted
-    evidence = {f"SOURCE_{i}": r for i, r in enumerate(clean_results, start=1)}
-    gen = generator.generate(SYSTEM_PROMPT, build_prompt(question, clean_results), SCHEMA)
-    info["generation_ms"] = gen.latency_ms
-    info["input_tokens"], info["output_tokens"] = gen.input_tokens, gen.output_tokens
-    if debug:
-        info["raw_model_output"] = gen.text
-        info["evidence"] = {eid: f"{r['document_title']} p{r['page_number']}: {r['text'][:150]}"
-                            for eid, r in evidence.items()}
-    try:
-        data = json.loads(gen.text)
-    except json.JSONDecodeError:
-        return refuse("invalid_model_output")
-    if not data.get("sentences"):
-        return refuse("model_declined")
-    verified, dropped = verify_sentences(data.get("sentences") or [], evidence)
-    verified, injected = filter_injected(verified)
-    dropped += ["suspected_injection"] * injected
-    if settings.support_check_enabled and verified:
-        verified, unsupported, check_ms = support_check(verified, generator)
-        dropped += unsupported
-        info["support_check_ms"] = check_ms
-    verified, heading_only = drop_heading_only(verified, evidence)
-    dropped += ["heading_only"] * heading_only
-    scores = relevance_scores(question, verified, embedder)
-    info["relevance"] = scores
-    if settings.answer_min_relevance is not None:
-        kept = [v for v, s in zip(verified, scores) if s >= settings.answer_min_relevance]
-        dropped += ["not_relevant"] * (len(verified) - len(kept))
-        verified = kept
     info["dropped_sentences"] = dropped
     info["reattributed_citations"] = sum(1 for v in verified if v["reattributed"])
     if not verified or len(dropped) > len(verified):
