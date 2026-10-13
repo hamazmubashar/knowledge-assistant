@@ -253,6 +253,15 @@ def relevance_scores(question: str, sentences: list[dict], embedder) -> list[flo
     return [round(_cosine(qv, v), 3) for v in vectors]
 
 
+def evidence_sufficient(best_distance, best_rerank, reranker_enabled: bool) -> bool:
+    """The evidence gate. With the reranker on, its score decides; otherwise vector distance does."""
+    if best_distance is None:
+        return False                     # nothing visible to this user matched at all
+    if reranker_enabled:
+        return best_rerank is not None and best_rerank >= settings.rerank_min_score
+    return best_distance <= settings.answer_max_distance
+
+
 def answer(db, user, question, embedder, index_id, generator, k=5, debug=False, judge=None) -> dict:
     ensure_independent_judge(generator, judge)
     t0 = time.perf_counter()
@@ -268,7 +277,9 @@ def answer(db, user, question, embedder, index_id, generator, k=5, debug=False, 
         return {"status": "refused", "answer": REFUSAL_TEXT, "refusal_reason": reason,
                 "conflict": False, "sentences": [], **info}
 
-    if best is None or best > settings.answer_max_distance:
+    rerank_scores = [r["rerank_score"] for r in results if r.get("rerank_score") is not None]
+    info["best_rerank"] = max(rerank_scores) if rerank_scores else None
+    if not evidence_sufficient(best, info["best_rerank"], settings.reranker_enabled):
         return refuse("weak_evidence")
 
     clean_results, redacted = [], 0

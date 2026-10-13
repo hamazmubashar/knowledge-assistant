@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://host.docker.internal:11434"
     generation_timeout_seconds: int = 180
     answer_max_distance: float = 0.30
+    reranker_enabled: bool = False
+    reranker_model: str = "Xenova/ms-marco-MiniLM-L-6-v2"
+    rerank_candidates: int = 20
+    rerank_min_score: float = 0.0
     support_check_enabled: bool = True
     answer_min_relevance: float | None = None
     gemini_api_key: str | None = None

@@ -1,7 +1,9 @@
 from sqlalchemy import func, select
 
 from app.core.authz import allowed_groups
+from app.core.config import settings
 from app.db.models import Chunk, Document, DocumentVersion, Embedding, VersionStatus
+from app.services.reranking import get_reranker, rerank
 
 RRF_K = 60
 
@@ -46,7 +48,9 @@ def search(db, user, query, embedder, index_id, k=5, candidates=20):
     for rank, cid in enumerate(keyword_ids, start=1):
         scores[cid] = scores.get(cid, 0) + 1 / (RRF_K + rank)
         krank[cid] = rank
-    top = sorted(scores, key=scores.get, reverse=True)[:k]
+    reranker = get_reranker()
+    pool = max(k, settings.rerank_candidates) if reranker else k
+    top = sorted(scores, key=scores.get, reverse=True)[:pool]
     if not top:
         return []
 
@@ -81,4 +85,4 @@ def search(db, user, query, embedder, index_id, k=5, candidates=20):
             "keyword_rank": krank.get(cid),
             "distance": round(vdist[cid], 4) if cid in vdist else None,
         })
-    return results
+    return rerank(query, results, reranker, k)

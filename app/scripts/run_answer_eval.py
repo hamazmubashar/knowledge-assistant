@@ -47,6 +47,7 @@ def score(q, r):
          "heading_leak": answered and any(heading_prefix(s["text"]) for s in r["sentences"]),
          "answer": r["answer"][:120].replace("\n", " "),
          "best_distance": r["best_distance"],
+         "best_rerank": r.get("best_rerank"),
          "relevance": min(r["relevance"]) if r.get("relevance") else None}
 
     if q["type"] in HAS_ANSWER:
@@ -138,6 +139,13 @@ def code_version() -> str:
         return "unknown"
 
 
+def reranker_description() -> str:
+    if not settings.reranker_enabled:
+        return "off (evidence gate: vector distance)"
+    return (f"{settings.reranker_model}, on; evidence gate: rerank score >= {settings.rerank_min_score}; "
+            f"{settings.rerank_candidates} candidates")
+
+
 def prompt_fingerprint() -> str:
     """Changes whenever any prompt or the answer schema changes."""
     text = "\n".join([answering.SYSTEM_PROMPT, json.dumps(answering.SCHEMA, sort_keys=True),
@@ -226,6 +234,7 @@ def main():
              f"- Question file: {qname} (sha256 {hashlib.sha256(raw).hexdigest()})",
              f"- Code version: {code_version()}",
              f"- Prompt fingerprint: {prompt_fingerprint()}; dependency fingerprint: {dependency_fingerprint()}",
+             f"- Reranker: {reranker_description()}",
              f"- Settings: top_k=5, support_check={settings.support_check_enabled}, "
              f"relevance_check={settings.relevance_check_enabled}, answer_min_relevance={settings.answer_min_relevance}",
              f"- Embedding model: {embedder.model_name}; evidence threshold: {settings.answer_max_distance}",
@@ -256,11 +265,12 @@ def main():
         lines.append(f"| {name} | {target} | " + " | ".join(fn(results[m][1]) for m in models) + " |")
     for model in models:
         lines += ["", f"## Per question: {model}", "",
-                  "| ID | Type | Result | Correct | Reason | Best dist | Min relevance | ms | Answer (first 120 chars) |",
-                  "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+                  "| ID | Type | Result | Correct | Reason | Best dist | Best rerank | Min relevance | ms | Answer (first 120 chars) |",
+                  "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
         for o in results[model][0]:
             lines.append(f"| {o['id']} | {o['type']} | {'answered' if o['answered'] else 'refused'} | "
                          f"{'✔' if o['correct'] else '✘'} | {o['reason'] or ''} | {o['best_distance']} | "
+                         f"{o['best_rerank'] if o['best_rerank'] is not None else ''} | "
                          f"{o['relevance'] if o['relevance'] is not None else ''} | {o['latency_ms']} | "
                          f"{o['answer'] if o['answered'] else ''} |")
     report = "\n".join(lines) + "\n"
