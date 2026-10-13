@@ -4,4 +4,8 @@ __pycache__/
 .pytest_cache/
 *.pdf
 .DS_Store 
-eval/cache/
+eval/cache/eval/acceptance_v1.csv
+eval/acceptance_v1.sha256
+eval/logs/
+corpus-pack-*.zip
+eval/pack/

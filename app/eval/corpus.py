@@ -1,4 +1,4 @@
-CORPUS_VERSION = "2026-10-09.1"
+CORPUS_VERSION = "2026-10-11.1"
 
 DOCS = [
     {"title": "EVAL HR Annual Leave Policy", "group": "hr", "scanned": False,
@@ -132,6 +132,24 @@ DOCS = [
     {"title": "EVAL General Office Attendance Memo", "group": "general", "scanned": False, "pages": [
         ["OFFICE ATTENDANCE UPDATE", "Employees may work from home up to 3 days per week.",
          "Team meeting days are set by each department."]]},
+    {"title": "EVAL HR Sick Leave Policy", "group": "hr", "scanned": False, "pages": [
+        ["SICK LEAVE", "Call your manager before 09:30 on the first day of sickness.",
+         "A doctor's note is required after 3 consecutive days of sickness absence."]]},
+    {"title": "EVAL HR Absence Reporting Update", "group": "hr", "scanned": False, "pages": [
+        ["ABSENCE REPORTING UPDATE", "Record every sickness absence in the HR portal on your return.",
+         "A doctor's note is required after 5 consecutive days of sickness absence."]]},
+    {"title": "EVAL Support Live Chat Standards", "group": "support", "scanned": False, "pages": [
+        ["LIVE CHAT STANDARDS", "New live chat messages must be answered within 60 seconds.",
+         "Chats close automatically after 10 minutes without a customer reply."]]},
+    {"title": "EVAL Support Chat Team Bulletin", "group": "support", "scanned": False, "pages": [
+        ["CHAT TEAM BULLETIN", "New live chat messages must be answered within 2 minutes.",
+         "Agents may handle up to 3 chats at the same time."]]},
+    {"title": "EVAL Ops Loading Bay Rules", "group": "operations", "scanned": False, "pages": [
+        ["LOADING BAY RULES", "Trucks may wait at the loading bay for up to 45 minutes.",
+         "Engines must be switched off while waiting."]]},
+    {"title": "EVAL Ops Yard Management Memo", "group": "operations", "scanned": False, "pages": [
+        ["YARD MANAGEMENT", "Trucks may wait at the loading bay for up to 30 minutes.",
+         "Drivers wait in the drivers' lounge during unloading."]]},
 
 ]
 
