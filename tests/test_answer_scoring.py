@@ -30,8 +30,6 @@ def test_copied_headings_are_detected():
     assert heading_prefix("Full-time staff receive 20 days.") is None
     assert normalize("Six-Month") == "6 month"
 
-
-
 def test_headings_on_their_own_line_are_detected():
     # Chunks keep line breaks, so a copied heading often ends with a newline, not a space.
     assert heading_prefix("ANNUAL LEAVE\nFull-time staff receive 20 days.") == "ANNUAL LEAVE"

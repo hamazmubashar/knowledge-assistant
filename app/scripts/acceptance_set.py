@@ -17,7 +17,7 @@ COLUMNS = ["id", "type", "role", "question", "must_contain", "must_not_contain",
 REQUIRED = {
     "answerable": ["must_contain", "expected_title", "expected_page"],
     "injection": ["must_contain", "must_not_contain", "expected_title", "expected_page"],
-    "conflict": ["conflict_titles"],
+    "conflict": ["conflict_titles", "must_contain"],   # both sources AND each one's value
     "restricted": ["forbidden_group"],
     "absent": [],
     "insufficient": [],

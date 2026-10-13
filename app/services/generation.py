@@ -34,15 +34,18 @@ class OllamaGenerator:
 
     def generate(self, system: str, user: str, schema: dict | None = None) -> GenerationResult:
         start = time.perf_counter()
-        r = self._client.post("/api/chat", json={
-            "model": self.model_name,
-            "messages": [{"role": "system", "content": system},
-                         {"role": "user", "content": user}],
-            "stream": False,
-            "format": schema or "json",
-            "options": {"temperature": 0, "num_ctx": 8192},
-        })
-        r.raise_for_status()
+        try:
+            r = self._client.post("/api/chat", json={
+                "model": self.model_name,
+                "messages": [{"role": "system", "content": system},
+                             {"role": "user", "content": user}],
+                "stream": False,
+                "format": schema or "json",
+                "options": {"temperature": 0, "num_ctx": 8192},
+            })
+            r.raise_for_status()
+        except httpx.TransportError as e:
+            raise ProviderUnavailable(f"Ollama ({self.model_name}) unreachable: {type(e).__name__}") from e
         body = r.json()
         return GenerationResult(
             text=body["message"]["content"],
@@ -116,6 +119,13 @@ class GeminiGenerator:
                     continue
                 raise ProviderUnavailable(
                     f"{self.model_name} returned server error {e.code} after 4 attempts")
+            except httpx.TransportError as e:
+                # Dropped connections and timeouts: retry, then stop cleanly instead of crashing the run.
+                if attempt < 3:
+                    time.sleep(15 * (attempt + 1))
+                    continue
+                raise ProviderUnavailable(
+                    f"{self.model_name} connection failed after 4 attempts: {type(e).__name__}") from e
         usage = resp.usage_metadata
         output = (usage.candidates_token_count or 0) + (usage.thoughts_token_count or 0)
         return GenerationResult(

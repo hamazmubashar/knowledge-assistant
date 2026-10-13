@@ -9,3 +9,5 @@ eval/acceptance_v1.sha256
 eval/logs/
 corpus-pack-*.zip
 eval/pack/
+.DS_Store
+eval/cache/

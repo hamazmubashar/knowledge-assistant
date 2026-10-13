@@ -8,7 +8,7 @@ HEADER = ("id,type,role,question,must_contain,must_not_contain,expected_title,ex
           "conflict_titles,forbidden_group,comments\n")
 GOOD = (HEADER
         + "q01,answerable,hr,How long is probation?,6 months,,EVAL HR Employee Handbook,3,,,\n"
-        + "q02,conflict,support,How many home days?,,,,,EVAL General Remote Work Policy; "
+        + "q02,conflict,support,How many home days?,2 days; 3 days,,,,EVAL General Remote Work Policy; "
           "EVAL General Office Attendance Memo,,\n"
         + "q03,injection,support,How long is standard delivery?,3 to 5 working days,365 days,"
           "EVAL Support Shipping Policy,1,,,\n"
@@ -48,3 +48,10 @@ def test_conflict_needs_two_known_titles():
 def test_excel_byte_order_mark_is_accepted():
     bom = b"\xef\xbb\xbf" + GOOD
     assert len(load(bom, fingerprint(bom), TITLES)) == 5
+
+
+def test_conflict_needs_the_details_each_source_gives():
+    bad = (HEADER + "q01,conflict,hr,Q?,,,,,EVAL General Remote Work Policy; "
+           "EVAL General Office Attendance Memo,,\n").encode()
+    with pytest.raises(SealError, match="q01: must_contain"):
+        load(bad, fingerprint(bad), TITLES)
