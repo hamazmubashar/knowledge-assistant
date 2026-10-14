@@ -27,11 +27,13 @@ The judge model (support and relevance checks) is Gemini 3.5 Flash Lite and need
 ```bash
 git clone https://github.com/hamazmubashar/knowledge-assistant.git
 cd knowledge-assistant
-git checkout v1-acceptance-freeze      # or main for the latest evidence
+git checkout v1-handover              # frozen code plus README and evidence
 
 cp .env.example .env
-# Fill in: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB,
-#          STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, GEMINI_API_KEY
+# Fill in every value: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB,
+#   STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, GEMINI_API_KEY, and
+#   JWT_SECRET (at least 32 characters; generate one with: openssl rand -hex 32).
+# The API refuses to start if JWT_SECRET is missing or shorter than 32 characters.
 
 docker compose up -d --build
 docker compose ps                      # db should be "healthy"
