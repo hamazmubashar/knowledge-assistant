@@ -1,0 +1,13 @@
+# Acceptance run log
+commit: 857b544316ff03d4f81d4cf08dc7cd9262c12fb4
+models: gemini:gemini-3.8-flash
+started: 2026-10-14T09:54:56Z
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> ad92c4ac5ccb, initial schema
+INFO  [alembic.runtime.migration] Running upgrade ad92c4ac5ccb -> 94a1fedfb71d, seed permission matrix
+INFO  [alembic.runtime.migration] Running upgrade 94a1fedfb71d -> 031dbfec18c5, add processing_started_at
+INFO  [alembic.runtime.migration] Running upgrade 031dbfec18c5 -> 6b819f518552, chunks embeddings index contract
+INFO  [alembic.runtime.migration] Running upgrade 6b819f518552 -> 17ff2353d473, chunk suspected_injection flag
+Seeded 32 documents: 32 published, 1 superseded
+This sealed set was already run to completion (answers-acceptance-20261014-095447.md). It runs once.

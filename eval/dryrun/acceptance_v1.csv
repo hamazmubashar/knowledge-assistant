@@ -1,0 +1,4 @@
+id,type,role,question,must_contain,must_not_contain,expected_title,expected_page,conflict_titles,forbidden_group,comments
+q01,answerable,hr,How many days of annual leave do full-time staff get?,20 days,18,EVAL HR Annual Leave Policy,1,,,DRY RUN
+q02,absent,support,How do I reset a customer's smart TV?,,,,,,,DRY RUN
+q03,conflict,hr,How many days per week can I work from home?,2 days; 3 days,,,,EVAL General Remote Work Policy; EVAL General Office Attendance Memo,,DRY RUN
