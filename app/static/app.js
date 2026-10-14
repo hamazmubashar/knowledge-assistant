@@ -10,6 +10,7 @@ const MAX_QUESTION = 500;
 const MAX_UPLOAD_MB = 50;
 const GROUP_LABEL = { hr: "HR", general: "General", support: "Support", operations: "Operations" };
 const groupLabel = (g) => GROUP_LABEL[g] || g;
+const ROLE_LABEL = { hr: "HR", support: "Support", operations: "Operations", system_admin: "System admin" };
 
 let token = null;
 let me = null;
@@ -21,18 +22,17 @@ const $ = (id) => document.getElementById(id);
 
 // ---------- Icons: self-hosted SVG paths, 24x24 stroke icons ----------
 const ICONS = {
-  shield: ["M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"],
+  layers: ["M12 3l9 5-9 5-9-5 9-5z", "M3 13l9 5 9-5", "M3 17.5l9 5 9-5"],
+  sparkle: ["M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z", "M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"],
   shieldCheck: ["M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z", "M9 12l2 2 4-4"],
   logout: ["M9 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3", "M16 17l5-5-5-5", "M21 12H9"],
-  arrowRight: ["M5 12h14", "M13 6l6 6-6 6"],
   search: ["M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z", "M20 20l-4-4"],
-  folder: ["M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"],
   lock: ["M6 11h12v9H6z", "M8 11V8a4 4 0 0 1 8 0v3"],
   file: ["M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z", "M14 3v5h5"],
+  pdf: ["M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z", "M14 3v5h5", "M8.5 16.5c2-1 4.5-4.5 4-6.5-.4-1.5-2-.8-1.5 1 .6 2.2 2.8 4.3 4.5 4.6 1.3.2 1.3-1.1 0-1.2-2.2-.2-5.5 1.2-7 2.1z"],
   fileQuestion: ["M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z", "M14 3v5h5",
     "M10 12a2 2 0 1 1 3 1.7c-.6.3-1 .8-1 1.3", "M12 18h.01"],
   external: ["M14 4h6v6", "M20 4l-9 9", "M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"],
-  alert: ["M10.3 4.3L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0z", "M12 9v4", "M12 17h.01"],
   alertCircle: ["M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z", "M12 8v5", "M12 16h.01"],
   split: ["M12 21v-8", "M12 13L4.5 5.5", "M12 13l7.5-7.5", "M4 10V5h5", "M20 10V5h-5"],
   scan: ["M4 8V6a2 2 0 0 1 2-2h2", "M16 4h2a2 2 0 0 1 2 2v2", "M20 16v2a2 2 0 0 1-2 2h-2",
@@ -154,14 +154,14 @@ function showApp() {
   $("login-view").hidden = true;
   $("app-view").hidden = false;
   $("whoami").hidden = false;
+  $("nav").hidden = false;
   $("user-email").textContent = me.email;
-  $("user-role").textContent = String(me.role).replace(/_/g, " ");
-  $("avatar").textContent = (me.email || "?").charAt(0);
+  $("user-role").textContent = ROLE_LABEL[me.role] || String(me.role).replace(/_/g, " ");
+  $("avatar").textContent = (me.email || "?").charAt(0).toUpperCase();
 
-  const groups = $("scope-groups");
-  groups.replaceChildren(...(me.readable_groups.length
-    ? me.readable_groups.map((g) => el("span", "pill", groupLabel(g)))
-    : [el("span", "pill", "no groups")]));
+  $("scope-groups").textContent = me.readable_groups.length
+    ? me.readable_groups.map(groupLabel).join(" · ")
+    : "no groups";
 
   $("docs-tab").hidden = me.admin_groups.length === 0; // convenience only
   $("doc-group").replaceChildren(...me.admin_groups.map((g) => {
@@ -181,10 +181,11 @@ function logout() {
   stopWaiting();
   $("app-view").hidden = true;
   $("whoami").hidden = true;
+  $("nav").hidden = true;
   $("login-view").hidden = false;
-  $("answer").replaceChildren();
   $("question").value = "";
   updateCounter();
+  renderEmpty();
   $("docs-table").querySelector("tbody").replaceChildren();
   $("email").focus();
 }
@@ -192,7 +193,7 @@ $("logout").addEventListener("click", logout);
 
 // ---------- Tabs ----------
 function switchTab(tab) {
-  document.querySelectorAll(".seg-btn").forEach((b) => {
+  document.querySelectorAll(".nav-btn").forEach((b) => {
     const on = b.dataset.tab === tab;
     b.classList.toggle("active", on);
     b.setAttribute("aria-selected", String(on));
@@ -202,26 +203,17 @@ function switchTab(tab) {
   if (tab === "docs") loadDocs();
   else clearTimeout(refreshTimer);
 }
-document.querySelectorAll(".seg-btn").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+document.querySelectorAll(".nav-btn").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
 
 // ---------- Ask: input ----------
-const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
-$("kbd-mod").textContent = isMac ? "⌘" : "Ctrl";
-
 function updateCounter() {
   const n = $("question").value.length;
   const c = $("counter");
-  c.textContent = `${n} / ${MAX_QUESTION}`;
-  c.classList.toggle("is-near", n >= MAX_QUESTION * 0.9 && n < MAX_QUESTION);
+  // Only shown when it matters: close to the limit.
+  c.textContent = n >= MAX_QUESTION * 0.8 ? `${n} / ${MAX_QUESTION}` : "";
   c.classList.toggle("is-full", n >= MAX_QUESTION);
 }
 $("question").addEventListener("input", updateCounter);
-$("question").addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-    e.preventDefault();
-    $("ask-form").requestSubmit();
-  }
-});
 
 $("ask-form").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -244,7 +236,7 @@ async function ask(question) {
     if (data.status === "answered" && Array.isArray(data.sentences) && data.sentences.length) {
       renderAnswer(data, question);
     } else {
-      renderRefusal(data.answer);
+      renderRefusal(data.answer, question);
     }
   } catch (err) {
     stopWaiting();
@@ -254,39 +246,69 @@ async function ask(question) {
   }
 }
 
-// ---------- Ask: states ----------
-function stateCard(kind, iconName, title, text) {
-  const card = el("div", `card state ${kind}`);
+// ---------- Ask: panel helpers ----------
+function placeholder(text) {
+  return el("p", "placeholder", text);
+}
+
+function setSide(sources, passages, counts = ["", ""]) {
+  $("sources").replaceChildren(...sources);
+  $("passages").replaceChildren(...passages);
+  $("sources-count").textContent = counts[0];
+  $("passages-count").textContent = counts[1];
+}
+
+function setAnswer(nodes, { time = "", refs = [], foot = null } = {}) {
+  $("answer").replaceChildren(...nodes);
+  $("answer-time").replaceChildren();
+  if (time) $("answer-time").append(icon("clock"), el("span", null, time));
+  $("refs").replaceChildren(...refs);
+  $("refs-wrap").hidden = refs.length === 0;
+  $("answer-foot").replaceChildren(...(foot ? [foot] : []));
+  $("answer-foot").hidden = !foot;
+}
+
+function stateBlock(kind, iconName, title, text) {
+  const box = el("div", `state ${kind}`);
   const body = el("div", "state-body");
   body.append(el("p", "state-title", title));
   if (text) body.append(el("p", "state-text", text));
-  card.append(iconSpan(iconName, "state-icon"), body);
-  return { card, body };
+  box.append(iconSpan(iconName, "state-icon"), body);
+  return { box, body };
 }
 
+function questionEcho(question) {
+  const echo = el("p", "question-echo");
+  echo.append(document.createTextNode("You asked "), el("q", null, question));
+  return echo;
+}
+
+// ---------- Ask: states ----------
 function renderEmpty() {
-  const row = el("div", "empty-state");
-  row.append(icon("shieldCheck"),
-    el("span", null, "Answers use only documents your role can read. Every sentence links to the page it was quoted from."));
-  $("answer").replaceChildren(row);
+  setSide([placeholder("Documents behind the answer appear here.")],
+    [placeholder("The exact passages each sentence is quoted from appear here.")]);
+  const intro = el("div", "intro");
+  intro.append(iconSpan("shieldCheck", "intro-icon"),
+    el("p", null, "Answers use only documents your role can read. Every sentence links to the page it was quoted from, and questions the documents don't cover are declined rather than guessed."));
+  setAnswer([intro]);
 }
 
 function renderWaiting() {
   stopWaiting();
-  const card = el("div", "card state state-wait");
-  const iconBox = el("span", "state-icon");
-  iconBox.append(el("span", "spinner"));
-  const body = el("div", "state-body");
+  const sk = () => {
+    const s = el("div", "skeleton");
+    s.append(el("span"), el("span"), el("span"));
+    return s;
+  };
+  setSide([sk()], [sk()]);
+  const { box, body } = stateBlock("state-wait", "search", "Searching documents you can access");
+  box.querySelector(".state-icon").replaceChildren(el("span", "spinner"));
   const elapsed = el("span", "elapsed", "0 s");
-  const title = el("p", "state-title", "Searching documents you can access");
   const text = el("p", "state-text");
   text.append(document.createTextNode("Finding evidence, drafting and checking each sentence against its source · "), elapsed);
-  const sk = el("div", "skeleton");
-  sk.append(el("span"), el("span"), el("span"));
-  body.append(title, text, sk);
-  card.append(iconBox, body);
-  card.setAttribute("aria-busy", "true");
-  $("answer").replaceChildren(card);
+  body.append(text, sk());
+  box.setAttribute("aria-busy", "true");
+  setAnswer([box]);
   const start = Date.now();
   waitTimer = setInterval(() => {
     elapsed.textContent = `${Math.floor((Date.now() - start) / 1000)} s`;
@@ -298,8 +320,10 @@ function stopWaiting() {
   waitTimer = null;
 }
 
-function renderRefusal(serverText) {
-  const { card, body } = stateCard("state-refusal", "fileQuestion",
+function renderRefusal(serverText, question) {
+  setSide([placeholder("No document met the evidence bar for this question.")],
+    [placeholder("Nothing was quoted, so nothing is shown.")]);
+  const { box, body } = stateBlock("state-refusal", "fileQuestion",
     "No answer found in your documents",
     serverText || "I can't find this in the documents you have access to.");
   const tips = el("ul", "state-tips");
@@ -307,12 +331,13 @@ function renderRefusal(serverText) {
     el("li", null, "Try different wording, or name the policy or document you have in mind."),
     el("li", null, "If you expected an answer, the document may be outside your access. Ask its owner."));
   body.append(tips);
-  $("answer").replaceChildren(card);
+  setAnswer([questionEcho(question), box]);
 }
 
 function renderProblem(err) {
   const unavailable = err.status === 503 || err.status === 429 || err.status === 0;
-  const { card, body } = stateCard("state-error", "alertCircle",
+  setSide([placeholder("—")], [placeholder("—")]);
+  const { box, body } = stateBlock("state-error", "alertCircle",
     unavailable ? "The answer service is temporarily unavailable" : "Something went wrong",
     unavailable
       ? "Your question was not answered, and nothing was guessed. Please try again in a minute."
@@ -322,15 +347,15 @@ function renderProblem(err) {
   retry.addEventListener("click", () => { if (lastQuestion) ask(lastQuestion); });
   actions.append(retry);
   body.append(actions);
-  $("answer").replaceChildren(card);
+  setAnswer([box]);
 }
 
 // ---------- Ask: answer ----------
 function renderAnswer(d, question) {
-  // One card per distinct quoted passage; several sentences may cite the same one.
+  // One numbered passage per distinct quote; several sentences may cite the same one.
   const cites = [];
   const keyToIndex = new Map();
-  const refs = d.sentences.map((s) => {
+  const refNums = d.sentences.map((s) => {
     const c = s.citation;
     const key = `${c.version_id}|${c.page_number}|${c.quote}`;
     if (!keyToIndex.has(key)) {
@@ -340,102 +365,102 @@ function renderAnswer(d, question) {
     return keyToIndex.get(key) + 1;
   });
 
-  const card = el("article", "card answer-card");
+  // Distinct documents, with the pages and passage numbers cited from each.
+  const docs = new Map();
+  cites.forEach((c, i) => {
+    if (!docs.has(c.version_id)) docs.set(c.version_id, { c, pages: new Set(), refs: [] });
+    const entry = docs.get(c.version_id);
+    entry.pages.add(c.page_number);
+    entry.refs.push(i + 1);
+  });
 
-  // Header
-  const head = el("header", "answer-head");
-  const label = el("span", "answer-label");
-  label.append(icon("shieldCheck"), el("span", null, "Verified answer & citations"));
-  const docs = new Set(cites.map((c) => c.version_id)).size;
-  const pill = el("span", "pill",
-    `${cites.length} ${cites.length === 1 ? "source" : "sources"} · ${docs} ${docs === 1 ? "document" : "documents"}`);
-  head.append(label, pill);
-  const ms = (d.retrieval_ms || 0) + (d.generation_ms || 0) + (d.judge_ms || 0);
-  if (ms > 0) {
-    const t = el("span", "answer-time");
-    t.append(icon("clock"), el("span", null, `${(ms / 1000).toFixed(1)} s`));
-    head.append(t);
-  }
-  card.append(head);
+  // Left: source documents and cited passages
+  const docRows = [...docs.values()].map(({ c, pages, refs }) => sourceRow(c, pages, refs));
+  const passageCards = cites.map((c, i) => passageCard(c, i + 1));
+  setSide(docRows, passageCards, [String(docs.size), String(cites.length)]);
 
-  // Conflict banner
+  // Right: answer text with numbered markers, then references
+  const nodes = [questionEcho(question)];
   if (d.conflict) {
-    const sec = el("div", "answer-section");
-    sec.append(banner("split", "The documents disagree",
-      "The cited sources give different answers to this question. Compare them below and confirm with the document owner before acting."));
-    card.append(sec);
+    nodes.push(banner("split", "The documents disagree",
+      "The cited sources give different answers to this question. Compare the passages and confirm with the document owner before acting."));
   }
-
-  // Answer text with numbered references
-  const main = el("div", "answer-section");
-  const echo = el("p", "question-echo");
-  echo.append(document.createTextNode("You asked "), el("q", null, question));
   const text = el("p", "answer-text");
   d.sentences.forEach((s, i) => {
     const span = el("span", "sentence", s.text);
-    span.dataset.ref = String(refs[i]);
-    const ref = el("button", "ref", refs[i]);
+    span.dataset.ref = String(refNums[i]);
+    const ref = el("button", "ref", refNums[i]);
     ref.type = "button";
-    ref.setAttribute("aria-label", `Show source ${refs[i]}`);
-    ref.addEventListener("click", () => highlight(card, refs[i], true));
+    ref.setAttribute("aria-label", `Show passage ${refNums[i]}`);
+    ref.addEventListener("click", () => highlight(refNums[i], true));
     text.append(span, ref, document.createTextNode(" "));
   });
-  main.append(echo, text);
-  card.append(main);
+  nodes.push(text);
 
-  // Citation cards
-  const src = el("div", "answer-section");
-  const sl = el("div", "section-label");
-  sl.append(el("span", null, "Sources"));
-  src.append(sl);
-  const list = el("div", "cites");
-  cites.forEach((c, i) => list.append(citationCard(c, i + 1, card)));
-  src.append(list);
-  card.append(src);
+  const refItems = cites.map((c, i) => refItem(c, i + 1));
 
-  // Footer
-  const foot = el("footer", "answer-foot");
+  const ms = (d.retrieval_ms || 0) + (d.generation_ms || 0) + (d.judge_ms || 0);
+  const foot = el("div", "foot-row");
   foot.append(icon("check"),
     el("span", null, "Each sentence is backed by a passage found word for word on the cited page."));
-  card.append(foot);
+  if (d.model) foot.append(el("span", "foot-model", `Answered by ${d.model}`));
 
-  $("answer").replaceChildren(card);
+  setAnswer(nodes, { time: ms > 0 ? `${(ms / 1000).toFixed(1)} s` : "", refs: refItems, foot });
 }
 
-function citationCard(c, n, answerCard) {
-  const box = el("div", "cite");
-  box.dataset.ref = String(n);
-
-  const head = el("div", "cite-head");
-  const meta = el("div", "cite-meta");
-  meta.append(el("span", "pill pill-mono", `v${c.version_number}`), el("span", "pill", `Page ${c.page_number}`));
-  const title = el("span", "cite-title", c.document_title);
+function sourceRow(c, pages, refs) {
+  const row = el("div", "source");
+  row.dataset.refs = refs.join(" ");
+  const sorted = [...pages].sort((a, b) => a - b);
+  const texts = el("div", "source-text");
+  const title = el("span", "source-title", c.document_title);
   title.title = c.document_title;
-  head.append(el("span", "cite-num", n), iconSpan("file", "cite-file"), title, meta);
-  box.append(head);
+  texts.append(title, el("span", "source-meta",
+    `v${c.version_number} · ${sorted.length === 1 ? "page" : "pages"} ${sorted.join(", ")}`));
+  const msg = el("p", "form-msg");
+  const open = button("Open", "btn btn-sm btn-ghost", "external", true);
+  open.setAttribute("aria-label", `Open ${c.document_title}, page ${sorted[0]}`);
+  open.addEventListener("click", () => openSource(c.version_id, sorted[0], msg));
+  row.append(iconSpan("pdf", "file-badge"), texts, open, msg);
+  row.addEventListener("mouseenter", () => refs.forEach((n) => highlight(n, false, true)));
+  row.addEventListener("mouseleave", () => highlight(null));
+  return row;
+}
 
-  box.append(el("blockquote", null, c.quote));
-
+function passageCard(c, n) {
+  const box = el("div", "passage");
+  box.dataset.ref = String(n);
+  const head = el("p", "passage-head");
+  head.append(el("span", "passage-num", `Passage ${n}`));
+  box.append(head, el("blockquote", null, c.quote),
+    el("p", "passage-src", `Source: ${c.document_title}, page ${c.page_number}`));
   if (c.low_confidence) {
     box.append(banner("scan", "Scanned page",
       "This text was read by OCR and may contain recognition errors. Check the original PDF."));
   }
+  box.addEventListener("mouseenter", () => highlight(n));
+  box.addEventListener("mouseleave", () => highlight(null));
+  return box;
+}
 
-  const foot = el("div", "cite-foot");
+function refItem(c, n) {
+  const li = el("li", "ref-item");
+  li.dataset.ref = String(n);
+  const texts = el("div", "ref-text");
+  texts.append(el("span", "ref-title", c.document_title),
+    el("span", "ref-meta", `v${c.version_number} · page ${c.page_number}`));
   const msg = el("p", "form-msg");
   const open = button("Open PDF", "btn btn-sm", "external", true);
   open.setAttribute("aria-label", `Open ${c.document_title}, page ${c.page_number}`);
   open.addEventListener("click", () => openSource(c.version_id, c.page_number, msg));
-  foot.append(msg, open);
-  box.append(foot);
-
-  box.addEventListener("mouseenter", () => highlight(answerCard, n, false));
-  box.addEventListener("mouseleave", () => highlight(answerCard, null, false));
-  return box;
+  li.append(el("span", "ref-num", n), texts, open, msg);
+  li.addEventListener("mouseenter", () => highlight(n));
+  li.addEventListener("mouseleave", () => highlight(null));
+  return li;
 }
 
 function banner(iconName, title, text) {
-  const b = el("div", "banner banner-amber");
+  const b = el("div", "banner");
   b.setAttribute("role", "note");
   const body = el("div");
   body.append(el("p", "banner-title", title), el("p", null, text));
@@ -443,12 +468,13 @@ function banner(iconName, title, text) {
   return b;
 }
 
-function highlight(card, n, scroll) {
-  card.querySelectorAll(".is-lit").forEach((x) => x.classList.remove("is-lit"));
+function highlight(n, scroll = false, keep = false) {
+  const root = $("ask-panel");
+  if (!keep) root.querySelectorAll(".is-lit").forEach((x) => x.classList.remove("is-lit"));
   if (n === null) return;
-  card.querySelectorAll(`[data-ref="${n}"]`).forEach((x) => x.classList.add("is-lit"));
+  root.querySelectorAll(`[data-ref="${n}"]`).forEach((x) => x.classList.add("is-lit"));
   if (scroll) {
-    const target = card.querySelector(`.cite[data-ref="${n}"]`);
+    const target = root.querySelector(`.passage[data-ref="${n}"]`);
     if (target) target.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 }
