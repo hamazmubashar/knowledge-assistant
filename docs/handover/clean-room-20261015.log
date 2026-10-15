@@ -1,0 +1,924 @@
+
+===== 13:34:34 0. Stop the demo stack (data kept) =====
+ Container knowledge-assistant-worker-1 Stopping 
+ Container knowledge-assistant-api-1 Stopping 
+ Container knowledge-assistant-api-1 Stopped 
+ Container knowledge-assistant-worker-1 Stopped 
+ Container knowledge-assistant-storage-1 Stopping 
+ Container knowledge-assistant-db-1 Stopping 
+ Container knowledge-assistant-storage-1 Stopped 
+ Container knowledge-assistant-db-1 Stopped 
+
+===== 13:34:34 1. Clean checkout =====
+fb7fcd4 README: restart worker after first migration
+uncommitted files: 0
+keys taken from .env.example: POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB STORAGE_ACCESS_KEY STORAGE_SECRET_KEY GEMINI_API_KEY JWT_SECRET 
+keys in the demo .env but missing from .env.example: none
+
+===== 13:34:36 2. Docker rebuild (no cache) =====
+ Image ka-clean-worker Building 
+ Image ka-clean-api Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 941B done
+#1 DONE 0.0s
+
+#2 [api internal] load build definition from Dockerfile
+#2 transferring dockerfile: 687B done
+#2 DONE 0.0s
+
+#3 [worker internal] load metadata for docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+#3 DONE 0.0s
+
+#4 [api internal] load .dockerignore
+#4 transferring context: 62B done
+#4 DONE 0.0s
+
+#5 [api internal] load build context
+#5 transferring context: 192.07kB 0.0s done
+#5 DONE 0.0s
+
+#6 [api 1/8] FROM docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+#6 resolve docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1 0.0s done
+#6 CACHED
+
+#7 [api 2/8] RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr     && rm -rf /var/lib/apt/lists/*
+#7 0.455 Hit:1 http://deb.debian.org/debian trixie InRelease
+#7 0.562 Get:2 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
+#7 0.805 Get:3 http://deb.debian.org/debian-security trixie-security InRelease [43.4 kB]
+#7 0.957 Get:4 http://deb.debian.org/debian trixie/main arm64 Packages [9614 kB]
+#7 2.271 Get:5 http://deb.debian.org/debian trixie-updates/main arm64 Packages [4424 B]
+#7 2.433 Get:6 http://deb.debian.org/debian-security trixie-security/main arm64 Packages [268 kB]
+#7 3.115 Fetched 9978 kB in 3s (3324 kB/s)
+#7 3.115 Reading package lists...
+#7 3.577 Reading package lists...
+#7 4.004 Building dependency tree...
+#7 4.093 Reading state information...
+#7 4.230 The following additional packages will be installed:
+#7 4.230   fontconfig fontconfig-config fonts-dejavu-core fonts-dejavu-mono
+#7 4.230   libarchive13t64 libatomic1 libbrotli1 libcairo2 libcom-err2 libcurl4t64
+#7 4.230   libdatrie1 libdeflate0 libexpat1 libfontconfig1 libfreetype6 libfribidi0
+#7 4.230   libgif7 libglib2.0-0t64 libgnutls30t64 libgomp1 libgraphite2-3
+#7 4.230   libgssapi-krb5-2 libharfbuzz0b libicu76 libidn2-0 libjbig0 libjpeg62-turbo
+#7 4.230   libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libldap2 libleptonica6
+#7 4.230   liblerc4 libnghttp2-14 libnghttp3-9 libopenjp2-7 libp11-kit0 libpango-1.0-0
+#7 4.230   libpangocairo-1.0-0 libpangoft2-1.0-0 libpixman-1-0 libpng16-16t64
+#7 4.231   libpsl5t64 librtmp1 libsasl2-2 libsasl2-modules-db libsharpyuv0 libssh2-1t64
+#7 4.231   libtasn1-6 libtesseract5 libthai-data libthai0 libtiff6 libunistring5
+#7 4.231   libwebp7 libwebpmux3 libx11-6 libx11-data libxau6 libxcb-render0 libxcb-shm0
+#7 4.231   libxcb1 libxdmcp6 libxext6 libxml2 libxrender1 tesseract-ocr-eng
+#7 4.231   tesseract-ocr-osd
+#7 4.232 Suggested packages:
+#7 4.232   lrzip low-memory-monitor gnutls-bin krb5-doc krb5-user
+#7 4.232 Recommended packages:
+#7 4.232   libglib2.0-data shared-mime-info xdg-user-dirs krb5-locales libldap-common
+#7 4.232   publicsuffix libsasl2-modules
+#7 4.723 The following NEW packages will be installed:
+#7 4.723   fontconfig fontconfig-config fonts-dejavu-core fonts-dejavu-mono
+#7 4.723   libarchive13t64 libatomic1 libbrotli1 libcairo2 libcom-err2 libcurl4t64
+#7 4.723   libdatrie1 libdeflate0 libexpat1 libfontconfig1 libfreetype6 libfribidi0
+#7 4.723   libgif7 libglib2.0-0t64 libgnutls30t64 libgomp1 libgraphite2-3
+#7 4.723   libgssapi-krb5-2 libharfbuzz0b libicu76 libidn2-0 libjbig0 libjpeg62-turbo
+#7 4.723   libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libldap2 libleptonica6
+#7 4.723   liblerc4 libnghttp2-14 libnghttp3-9 libopenjp2-7 libp11-kit0 libpango-1.0-0
+#7 4.723   libpangocairo-1.0-0 libpangoft2-1.0-0 libpixman-1-0 libpng16-16t64
+#7 4.724   libpsl5t64 librtmp1 libsasl2-2 libsasl2-modules-db libsharpyuv0 libssh2-1t64
+#7 4.724   libtasn1-6 libtesseract5 libthai-data libthai0 libtiff6 libunistring5
+#7 4.724   libwebp7 libwebpmux3 libx11-6 libx11-data libxau6 libxcb-render0 libxcb-shm0
+#7 4.724   libxcb1 libxdmcp6 libxext6 libxml2 libxrender1 tesseract-ocr
+#7 4.724   tesseract-ocr-eng tesseract-ocr-osd
+#7 4.983 0 upgraded, 70 newly installed, 0 to remove and 1 not upgraded.
+#7 4.983 Need to get 31.8 MB of archives.
+#7 4.983 After this operation, 108 MB of additional disk space will be used.
+#7 4.983 Get:1 http://deb.debian.org/debian trixie/main arm64 libexpat1 arm64 2.8.3-1~deb13u1 [109 kB]
+#7 5.275 Get:2 http://deb.debian.org/debian trixie/main arm64 libbrotli1 arm64 1.1.0-2+b7 [308 kB]
+#7 5.559 Get:3 http://deb.debian.org/debian-security trixie-security/main arm64 libpng16-16t64 arm64 1.6.48-1+deb13u6 [275 kB]
+#7 5.716 Get:4 http://deb.debian.org/debian trixie/main arm64 libfreetype6 arm64 2.13.3+dfsg-1+deb13u1 [422 kB]
+#7 5.880 Get:5 http://deb.debian.org/debian trixie/main arm64 fonts-dejavu-mono all 2.37-8 [489 kB]
+#7 6.033 Get:6 http://deb.debian.org/debian trixie/main arm64 fonts-dejavu-core all 2.37-8 [840 kB]
+#7 6.201 Get:7 http://deb.debian.org/debian trixie/main arm64 fontconfig-config arm64 2.15.0-2.3 [318 kB]
+#7 6.339 Get:8 http://deb.debian.org/debian trixie/main arm64 libfontconfig1 arm64 2.15.0-2.3 [387 kB]
+#7 6.485 Get:9 http://deb.debian.org/debian trixie/main arm64 fontconfig arm64 2.15.0-2.3 [463 kB]
+#7 6.628 Get:10 http://deb.debian.org/debian trixie/main arm64 libxml2 arm64 2.12.7+dfsg+really2.9.14-2.1+deb13u3 [631 kB]
+#7 6.782 Get:11 http://deb.debian.org/debian trixie/main arm64 libarchive13t64 arm64 3.7.4-4+deb13u1 [324 kB]
+#7 6.805 Get:12 http://deb.debian.org/debian trixie/main arm64 libatomic1 arm64 14.2.0-19 [10.1 kB]
+#7 6.808 Get:13 http://deb.debian.org/debian trixie/main arm64 libpixman-1-0 arm64 0.44.0-3 [168 kB]
+#7 6.811 Get:14 http://deb.debian.org/debian trixie/main arm64 libxau6 arm64 1:1.0.11-1 [20.6 kB]
+#7 6.813 Get:15 http://deb.debian.org/debian trixie/main arm64 libxdmcp6 arm64 1:1.1.5-1 [27.8 kB]
+#7 6.933 Get:16 http://deb.debian.org/debian trixie/main arm64 libxcb1 arm64 1.17.0-2+b1 [143 kB]
+#7 6.939 Get:17 http://deb.debian.org/debian trixie/main arm64 libx11-data all 2:1.8.12-1 [343 kB]
+#7 7.085 Get:18 http://deb.debian.org/debian trixie/main arm64 libx11-6 arm64 2:1.8.12-1 [795 kB]
+#7 7.247 Get:19 http://deb.debian.org/debian trixie/main arm64 libxcb-render0 arm64 1.17.0-2+b1 [115 kB]
+#7 7.373 Get:20 http://deb.debian.org/debian trixie/main arm64 libxcb-shm0 arm64 1.17.0-2+b1 [105 kB]
+#7 7.378 Get:21 http://deb.debian.org/debian trixie/main arm64 libxext6 arm64 2:1.3.4-1+b3 [49.2 kB]
+#7 7.379 Get:22 http://deb.debian.org/debian trixie/main arm64 libxrender1 arm64 1:0.9.12-1 [27.0 kB]
+#7 7.501 Get:23 http://deb.debian.org/debian trixie/main arm64 libcairo2 arm64 1.18.4-1+b1 [483 kB]
+#7 7.526 Get:24 http://deb.debian.org/debian trixie/main arm64 libcom-err2 arm64 1.47.2-3+b12 [24.9 kB]
+#7 7.529 Get:25 http://deb.debian.org/debian trixie/main arm64 libkrb5support0 arm64 1.21.3-5+deb13u1 [32.5 kB]
+#7 7.532 Get:26 http://deb.debian.org/debian trixie/main arm64 libk5crypto3 arm64 1.21.3-5+deb13u1 [81.4 kB]
+#7 7.535 Get:27 http://deb.debian.org/debian trixie/main arm64 libkeyutils1 arm64 1.6.3-6 [9716 B]
+#7 7.654 Get:28 http://deb.debian.org/debian trixie/main arm64 libkrb5-3 arm64 1.21.3-5+deb13u1 [308 kB]
+#7 7.668 Get:29 http://deb.debian.org/debian trixie/main arm64 libgssapi-krb5-2 arm64 1.21.3-5+deb13u1 [128 kB]
+#7 7.675 Get:30 http://deb.debian.org/debian trixie/main arm64 libunistring5 arm64 1.3-2 [453 kB]
+#7 7.717 Get:31 http://deb.debian.org/debian trixie/main arm64 libidn2-0 arm64 2.3.8-2 [107 kB]
+#7 7.724 Get:32 http://deb.debian.org/debian trixie/main arm64 libsasl2-modules-db arm64 2.1.28+dfsg1-9 [20.1 kB]
+#7 7.725 Get:33 http://deb.debian.org/debian trixie/main arm64 libsasl2-2 arm64 2.1.28+dfsg1-9 [55.6 kB]
+#7 7.849 Get:34 http://deb.debian.org/debian trixie/main arm64 libldap2 arm64 2.6.10+dfsg-1 [179 kB]
+#7 7.858 Get:35 http://deb.debian.org/debian trixie/main arm64 libnghttp2-14 arm64 1.64.0-1.1+deb13u1 [71.6 kB]
+#7 7.862 Get:36 http://deb.debian.org/debian trixie/main arm64 libnghttp3-9 arm64 1.8.0-1 [63.2 kB]
+#7 7.867 Get:37 http://deb.debian.org/debian trixie/main arm64 libpsl5t64 arm64 0.21.2-1.1+b1 [57.1 kB]
+#7 7.989 Get:38 http://deb.debian.org/debian trixie/main arm64 libp11-kit0 arm64 0.25.5-3 [409 kB]
+#7 8.020 Get:39 http://deb.debian.org/debian trixie/main arm64 libtasn1-6 arm64 4.20.0-2+deb13u1 [47.3 kB]
+#7 8.022 Get:40 http://deb.debian.org/debian trixie/main arm64 libgnutls30t64 arm64 3.8.9-3+deb13u4 [1379 kB]
+#7 8.105 Get:41 http://deb.debian.org/debian trixie/main arm64 librtmp1 arm64 2.4+20151223.gitfa8646d.1-2+b5 [56.8 kB]
+#7 8.110 Get:42 http://deb.debian.org/debian trixie/main arm64 libssh2-1t64 arm64 1.11.1-1+deb13u2 [236 kB]
+#7 8.129 Get:43 http://deb.debian.org/debian-security trixie-security/main arm64 libcurl4t64 arm64 8.14.1-2+deb13u7 [361 kB]
+#7 8.156 Get:44 http://deb.debian.org/debian trixie/main arm64 libdatrie1 arm64 0.2.13-3+b1 [37.6 kB]
+#7 8.157 Get:45 http://deb.debian.org/debian trixie/main arm64 libdeflate0 arm64 1.23-2 [42.4 kB]
+#7 8.160 Get:46 http://deb.debian.org/debian trixie/main arm64 libfribidi0 arm64 1.0.16-1 [26.5 kB]
+#7 8.161 Get:47 http://deb.debian.org/debian trixie/main arm64 libgif7 arm64 5.2.2-1+deb13u1 [44.1 kB]
+#7 8.287 Get:48 http://deb.debian.org/debian trixie/main arm64 libglib2.0-0t64 arm64 2.84.4-3~deb13u5 [1429 kB]
+#7 8.498 Get:49 http://deb.debian.org/debian trixie/main arm64 libgomp1 arm64 14.2.0-19 [124 kB]
+#7 8.504 Get:50 http://deb.debian.org/debian trixie/main arm64 libgraphite2-3 arm64 1.3.14-2+deb13u1 [70.3 kB]
+#7 8.508 Get:51 http://deb.debian.org/debian trixie/main arm64 libharfbuzz0b arm64 10.2.0-1+deb13u1 [442 kB]
+#7 8.654 Get:52 http://deb.debian.org/debian trixie/main arm64 libicu76 arm64 76.1-4 [9524 kB]
+#7 9.782 Get:53 http://deb.debian.org/debian trixie/main arm64 libjbig0 arm64 2.1-6.1+b2 [30.4 kB]
+#7 9.898 Get:54 http://deb.debian.org/debian trixie/main arm64 libjpeg62-turbo arm64 1:2.1.5-4 [173 kB]
+#7 10.03 Get:55 http://deb.debian.org/debian trixie/main arm64 libopenjp2-7 arm64 2.5.3-2.1~deb13u2 [189 kB]
+#7 10.16 Get:56 http://deb.debian.org/debian trixie/main arm64 liblerc4 arm64 4.0.0+ds-5 [146 kB]
+#7 10.29 Get:57 http://deb.debian.org/debian trixie/main arm64 libsharpyuv0 arm64 1.5.0-0.1 [114 kB]
+#7 10.29 Get:58 http://deb.debian.org/debian trixie/main arm64 libwebp7 arm64 1.5.0-0.1 [271 kB]
+#7 10.43 Get:59 http://deb.debian.org/debian trixie/main arm64 libtiff6 arm64 4.7.0-3+deb13u3 [325 kB]
+#7 10.57 Get:60 http://deb.debian.org/debian trixie/main arm64 libwebpmux3 arm64 1.5.0-0.1 [125 kB]
+#7 10.70 Get:61 http://deb.debian.org/debian trixie/main arm64 libleptonica6 arm64 1.84.1-4 [994 kB]
+#7 10.88 Get:62 http://deb.debian.org/debian trixie/main arm64 libthai-data all 0.1.29-2 [168 kB]
+#7 10.89 Get:63 http://deb.debian.org/debian trixie/main arm64 libthai0 arm64 0.1.29-2+b1 [48.4 kB]
+#7 10.89 Get:64 http://deb.debian.org/debian trixie/main arm64 libpango-1.0-0 arm64 1.56.3-1 [213 kB]
+#7 10.91 Get:65 http://deb.debian.org/debian trixie/main arm64 libpangoft2-1.0-0 arm64 1.56.3-1 [52.9 kB]
+#7 10.91 Get:66 http://deb.debian.org/debian trixie/main arm64 libpangocairo-1.0-0 arm64 1.56.3-1 [33.7 kB]
+#7 11.03 Get:67 http://deb.debian.org/debian trixie/main arm64 libtesseract5 arm64 5.5.0-1+b1 [1237 kB]
+#7 11.22 Get:68 http://deb.debian.org/debian trixie/main arm64 tesseract-ocr-eng all 1:4.1.0-2 [1594 kB]
+#7 11.45 Get:69 http://deb.debian.org/debian trixie/main arm64 tesseract-ocr-osd all 1:4.1.0-2 [2992 kB]
+#7 11.76 Get:70 http://deb.debian.org/debian trixie/main arm64 tesseract-ocr arm64 5.5.0-1+b1 [389 kB]
+#7 11.92 debconf: unable to initialize frontend: Dialog
+#7 11.92 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#7 11.92 debconf: falling back to frontend: Readline
+#7 11.92 debconf: unable to initialize frontend: Readline
+#7 11.92 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC entries checked: /etc/perl /usr/local/lib/aarch64-linux-gnu/perl/5.40.1 /usr/local/share/perl/5.40.1 /usr/lib/aarch64-linux-gnu/perl5/5.40 /usr/share/perl5 /usr/lib/aarch64-linux-gnu/perl-base /usr/lib/aarch64-linux-gnu/perl/5.40 /usr/share/perl/5.40 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 8, <STDIN> line 70.)
+#7 11.92 debconf: falling back to frontend: Teletype
+#7 11.92 debconf: unable to initialize frontend: Teletype
+#7 11.92 debconf: (This frontend requires a controlling tty.)
+#7 11.92 debconf: falling back to frontend: Noninteractive
+#7 13.17 Preconfiguring packages ...
+#7 13.21 Fetched 31.8 MB in 7s (4509 kB/s)
+#7 13.22 Selecting previously unselected package libexpat1:arm64.
+#7 13.22 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 5657 files and directories currently installed.)
+#7 13.22 Preparing to unpack .../00-libexpat1_2.8.3-1~deb13u1_arm64.deb ...
+#7 13.23 Unpacking libexpat1:arm64 (2.8.3-1~deb13u1) ...
+#7 13.24 Selecting previously unselected package libbrotli1:arm64.
+#7 13.25 Preparing to unpack .../01-libbrotli1_1.1.0-2+b7_arm64.deb ...
+#7 13.25 Unpacking libbrotli1:arm64 (1.1.0-2+b7) ...
+#7 13.27 Selecting previously unselected package libpng16-16t64:arm64.
+#7 13.28 Preparing to unpack .../02-libpng16-16t64_1.6.48-1+deb13u6_arm64.deb ...
+#7 13.28 Unpacking libpng16-16t64:arm64 (1.6.48-1+deb13u6) ...
+#7 13.30 Selecting previously unselected package libfreetype6:arm64.
+#7 13.30 Preparing to unpack .../03-libfreetype6_2.13.3+dfsg-1+deb13u1_arm64.deb ...
+#7 13.30 Unpacking libfreetype6:arm64 (2.13.3+dfsg-1+deb13u1) ...
+#7 13.33 Selecting previously unselected package fonts-dejavu-mono.
+#7 13.33 Preparing to unpack .../04-fonts-dejavu-mono_2.37-8_all.deb ...
+#7 13.33 Unpacking fonts-dejavu-mono (2.37-8) ...
+#7 13.37 Selecting previously unselected package fonts-dejavu-core.
+#7 13.37 Preparing to unpack .../05-fonts-dejavu-core_2.37-8_all.deb ...
+#7 13.38 Unpacking fonts-dejavu-core (2.37-8) ...
+#7 13.43 Selecting previously unselected package fontconfig-config.
+#7 13.43 Preparing to unpack .../06-fontconfig-config_2.15.0-2.3_arm64.deb ...
+#7 13.43 Unpacking fontconfig-config (2.15.0-2.3) ...
+#7 13.45 Selecting previously unselected package libfontconfig1:arm64.
+#7 13.45 Preparing to unpack .../07-libfontconfig1_2.15.0-2.3_arm64.deb ...
+#7 13.46 Unpacking libfontconfig1:arm64 (2.15.0-2.3) ...
+#7 13.47 Selecting previously unselected package fontconfig.
+#7 13.47 Preparing to unpack .../08-fontconfig_2.15.0-2.3_arm64.deb ...
+#7 13.48 Unpacking fontconfig (2.15.0-2.3) ...
+#7 13.50 Selecting previously unselected package libxml2:arm64.
+#7 13.50 Preparing to unpack .../09-libxml2_2.12.7+dfsg+really2.9.14-2.1+deb13u3_arm64.deb ...
+#7 13.50 Unpacking libxml2:arm64 (2.12.7+dfsg+really2.9.14-2.1+deb13u3) ...
+#7 13.54 Selecting previously unselected package libarchive13t64:arm64.
+#7 13.54 Preparing to unpack .../10-libarchive13t64_3.7.4-4+deb13u1_arm64.deb ...
+#7 13.54 Unpacking libarchive13t64:arm64 (3.7.4-4+deb13u1) ...
+#7 13.57 Selecting previously unselected package libatomic1:arm64.
+#7 13.57 Preparing to unpack .../11-libatomic1_14.2.0-19_arm64.deb ...
+#7 13.57 Unpacking libatomic1:arm64 (14.2.0-19) ...
+#7 13.58 Selecting previously unselected package libpixman-1-0:arm64.
+#7 13.58 Preparing to unpack .../12-libpixman-1-0_0.44.0-3_arm64.deb ...
+#7 13.58 Unpacking libpixman-1-0:arm64 (0.44.0-3) ...
+#7 13.60 Selecting previously unselected package libxau6:arm64.
+#7 13.60 Preparing to unpack .../13-libxau6_1%3a1.0.11-1_arm64.deb ...
+#7 13.61 Unpacking libxau6:arm64 (1:1.0.11-1) ...
+#7 13.62 Selecting previously unselected package libxdmcp6:arm64.
+#7 13.62 Preparing to unpack .../14-libxdmcp6_1%3a1.1.5-1_arm64.deb ...
+#7 13.62 Unpacking libxdmcp6:arm64 (1:1.1.5-1) ...
+#7 13.63 Selecting previously unselected package libxcb1:arm64.
+#7 13.63 Preparing to unpack .../15-libxcb1_1.17.0-2+b1_arm64.deb ...
+#7 13.63 Unpacking libxcb1:arm64 (1.17.0-2+b1) ...
+#7 13.64 Selecting previously unselected package libx11-data.
+#7 13.65 Preparing to unpack .../16-libx11-data_2%3a1.8.12-1_all.deb ...
+#7 13.65 Unpacking libx11-data (2:1.8.12-1) ...
+#7 13.68 Selecting previously unselected package libx11-6:arm64.
+#7 13.68 Preparing to unpack .../17-libx11-6_2%3a1.8.12-1_arm64.deb ...
+#7 13.68 Unpacking libx11-6:arm64 (2:1.8.12-1) ...
+#7 13.73 Selecting previously unselected package libxcb-render0:arm64.
+#7 13.73 Preparing to unpack .../18-libxcb-render0_1.17.0-2+b1_arm64.deb ...
+#7 13.73 Unpacking libxcb-render0:arm64 (1.17.0-2+b1) ...
+#7 13.74 Selecting previously unselected package libxcb-shm0:arm64.
+#7 13.74 Preparing to unpack .../19-libxcb-shm0_1.17.0-2+b1_arm64.deb ...
+#7 13.74 Unpacking libxcb-shm0:arm64 (1.17.0-2+b1) ...
+#7 13.76 Selecting previously unselected package libxext6:arm64.
+#7 13.76 Preparing to unpack .../20-libxext6_2%3a1.3.4-1+b3_arm64.deb ...
+#7 13.76 Unpacking libxext6:arm64 (2:1.3.4-1+b3) ...
+#7 13.77 Selecting previously unselected package libxrender1:arm64.
+#7 13.78 Preparing to unpack .../21-libxrender1_1%3a0.9.12-1_arm64.deb ...
+#7 13.78 Unpacking libxrender1:arm64 (1:0.9.12-1) ...
+#7 13.79 Selecting previously unselected package libcairo2:arm64.
+#7 13.79 Preparing to unpack .../22-libcairo2_1.18.4-1+b1_arm64.deb ...
+#7 13.79 Unpacking libcairo2:arm64 (1.18.4-1+b1) ...
+#7 13.83 Selecting previously unselected package libcom-err2:arm64.
+#7 13.83 Preparing to unpack .../23-libcom-err2_1.47.2-3+b12_arm64.deb ...
+#7 13.83 Unpacking libcom-err2:arm64 (1.47.2-3+b12) ...
+#7 13.84 Selecting previously unselected package libkrb5support0:arm64.
+#7 13.84 Preparing to unpack .../24-libkrb5support0_1.21.3-5+deb13u1_arm64.deb ...
+#7 13.84 Unpacking libkrb5support0:arm64 (1.21.3-5+deb13u1) ...
+#7 13.85 Selecting previously unselected package libk5crypto3:arm64.
+#7 13.85 Preparing to unpack .../25-libk5crypto3_1.21.3-5+deb13u1_arm64.deb ...
+#7 13.86 Unpacking libk5crypto3:arm64 (1.21.3-5+deb13u1) ...
+#7 13.87 Selecting previously unselected package libkeyutils1:arm64.
+#7 13.87 Preparing to unpack .../26-libkeyutils1_1.6.3-6_arm64.deb ...
+#7 13.87 Unpacking libkeyutils1:arm64 (1.6.3-6) ...
+#7 13.88 Selecting previously unselected package libkrb5-3:arm64.
+#7 13.88 Preparing to unpack .../27-libkrb5-3_1.21.3-5+deb13u1_arm64.deb ...
+#7 13.88 Unpacking libkrb5-3:arm64 (1.21.3-5+deb13u1) ...
+#7 13.91 Selecting previously unselected package libgssapi-krb5-2:arm64.
+#7 13.92 Preparing to unpack .../28-libgssapi-krb5-2_1.21.3-5+deb13u1_arm64.deb ...
+#7 13.92 Unpacking libgssapi-krb5-2:arm64 (1.21.3-5+deb13u1) ...
+#7 13.93 Selecting previously unselected package libunistring5:arm64.
+#7 13.94 Preparing to unpack .../29-libunistring5_1.3-2_arm64.deb ...
+#7 13.94 Unpacking libunistring5:arm64 (1.3-2) ...
+#7 13.97 Selecting previously unselected package libidn2-0:arm64.
+#7 13.97 Preparing to unpack .../30-libidn2-0_2.3.8-2_arm64.deb ...
+#7 13.98 Unpacking libidn2-0:arm64 (2.3.8-2) ...
+#7 13.99 Selecting previously unselected package libsasl2-modules-db:arm64.
+#7 13.99 Preparing to unpack .../31-libsasl2-modules-db_2.1.28+dfsg1-9_arm64.deb ...
+#7 13.99 Unpacking libsasl2-modules-db:arm64 (2.1.28+dfsg1-9) ...
+#7 14.00 Selecting previously unselected package libsasl2-2:arm64.
+#7 14.01 Preparing to unpack .../32-libsasl2-2_2.1.28+dfsg1-9_arm64.deb ...
+#7 14.01 Unpacking libsasl2-2:arm64 (2.1.28+dfsg1-9) ...
+#7 14.02 Selecting previously unselected package libldap2:arm64.
+#7 14.02 Preparing to unpack .../33-libldap2_2.6.10+dfsg-1_arm64.deb ...
+#7 14.02 Unpacking libldap2:arm64 (2.6.10+dfsg-1) ...
+#7 14.04 Selecting previously unselected package libnghttp2-14:arm64.
+#7 14.04 Preparing to unpack .../34-libnghttp2-14_1.64.0-1.1+deb13u1_arm64.deb ...
+#7 14.04 Unpacking libnghttp2-14:arm64 (1.64.0-1.1+deb13u1) ...
+#7 14.06 Selecting previously unselected package libnghttp3-9:arm64.
+#7 14.06 Preparing to unpack .../35-libnghttp3-9_1.8.0-1_arm64.deb ...
+#7 14.06 Unpacking libnghttp3-9:arm64 (1.8.0-1) ...
+#7 14.07 Selecting previously unselected package libpsl5t64:arm64.
+#7 14.07 Preparing to unpack .../36-libpsl5t64_0.21.2-1.1+b1_arm64.deb ...
+#7 14.07 Unpacking libpsl5t64:arm64 (0.21.2-1.1+b1) ...
+#7 14.09 Selecting previously unselected package libp11-kit0:arm64.
+#7 14.09 Preparing to unpack .../37-libp11-kit0_0.25.5-3_arm64.deb ...
+#7 14.09 Unpacking libp11-kit0:arm64 (0.25.5-3) ...
+#7 14.12 Selecting previously unselected package libtasn1-6:arm64.
+#7 14.12 Preparing to unpack .../38-libtasn1-6_4.20.0-2+deb13u1_arm64.deb ...
+#7 14.12 Unpacking libtasn1-6:arm64 (4.20.0-2+deb13u1) ...
+#7 14.13 Selecting previously unselected package libgnutls30t64:arm64.
+#7 14.13 Preparing to unpack .../39-libgnutls30t64_3.8.9-3+deb13u4_arm64.deb ...
+#7 14.13 Unpacking libgnutls30t64:arm64 (3.8.9-3+deb13u4) ...
+#7 14.20 Selecting previously unselected package librtmp1:arm64.
+#7 14.20 Preparing to unpack .../40-librtmp1_2.4+20151223.gitfa8646d.1-2+b5_arm64.deb ...
+#7 14.20 Unpacking librtmp1:arm64 (2.4+20151223.gitfa8646d.1-2+b5) ...
+#7 14.21 Selecting previously unselected package libssh2-1t64:arm64.
+#7 14.21 Preparing to unpack .../41-libssh2-1t64_1.11.1-1+deb13u2_arm64.deb ...
+#7 14.21 Unpacking libssh2-1t64:arm64 (1.11.1-1+deb13u2) ...
+#7 14.23 Selecting previously unselected package libcurl4t64:arm64.
+#7 14.23 Preparing to unpack .../42-libcurl4t64_8.14.1-2+deb13u7_arm64.deb ...
+#7 14.23 Unpacking libcurl4t64:arm64 (8.14.1-2+deb13u7) ...
+#7 14.26 Selecting previously unselected package libdatrie1:arm64.
+#7 14.26 Preparing to unpack .../43-libdatrie1_0.2.13-3+b1_arm64.deb ...
+#7 14.26 Unpacking libdatrie1:arm64 (0.2.13-3+b1) ...
+#7 14.28 Selecting previously unselected package libdeflate0:arm64.
+#7 14.28 Preparing to unpack .../44-libdeflate0_1.23-2_arm64.deb ...
+#7 14.28 Unpacking libdeflate0:arm64 (1.23-2) ...
+#7 14.29 Selecting previously unselected package libfribidi0:arm64.
+#7 14.29 Preparing to unpack .../45-libfribidi0_1.0.16-1_arm64.deb ...
+#7 14.29 Unpacking libfribidi0:arm64 (1.0.16-1) ...
+#7 14.30 Selecting previously unselected package libgif7:arm64.
+#7 14.30 Preparing to unpack .../46-libgif7_5.2.2-1+deb13u1_arm64.deb ...
+#7 14.31 Unpacking libgif7:arm64 (5.2.2-1+deb13u1) ...
+#7 14.32 Selecting previously unselected package libglib2.0-0t64:arm64.
+#7 14.32 Preparing to unpack .../47-libglib2.0-0t64_2.84.4-3~deb13u5_arm64.deb ...
+#7 14.33 Unpacking libglib2.0-0t64:arm64 (2.84.4-3~deb13u5) ...
+#7 14.41 Selecting previously unselected package libgomp1:arm64.
+#7 14.41 Preparing to unpack .../48-libgomp1_14.2.0-19_arm64.deb ...
+#7 14.41 Unpacking libgomp1:arm64 (14.2.0-19) ...
+#7 14.43 Selecting previously unselected package libgraphite2-3:arm64.
+#7 14.43 Preparing to unpack .../49-libgraphite2-3_1.3.14-2+deb13u1_arm64.deb ...
+#7 14.43 Unpacking libgraphite2-3:arm64 (1.3.14-2+deb13u1) ...
+#7 14.44 Selecting previously unselected package libharfbuzz0b:arm64.
+#7 14.44 Preparing to unpack .../50-libharfbuzz0b_10.2.0-1+deb13u1_arm64.deb ...
+#7 14.45 Unpacking libharfbuzz0b:arm64 (10.2.0-1+deb13u1) ...
+#7 14.48 Selecting previously unselected package libicu76:arm64.
+#7 14.48 Preparing to unpack .../51-libicu76_76.1-4_arm64.deb ...
+#7 14.48 Unpacking libicu76:arm64 (76.1-4) ...
+#7 14.86 Selecting previously unselected package libjbig0:arm64.
+#7 14.86 Preparing to unpack .../52-libjbig0_2.1-6.1+b2_arm64.deb ...
+#7 14.86 Unpacking libjbig0:arm64 (2.1-6.1+b2) ...
+#7 14.87 Selecting previously unselected package libjpeg62-turbo:arm64.
+#7 14.88 Preparing to unpack .../53-libjpeg62-turbo_1%3a2.1.5-4_arm64.deb ...
+#7 14.88 Unpacking libjpeg62-turbo:arm64 (1:2.1.5-4) ...
+#7 14.90 Selecting previously unselected package libopenjp2-7:arm64.
+#7 14.90 Preparing to unpack .../54-libopenjp2-7_2.5.3-2.1~deb13u2_arm64.deb ...
+#7 14.90 Unpacking libopenjp2-7:arm64 (2.5.3-2.1~deb13u2) ...
+#7 14.92 Selecting previously unselected package liblerc4:arm64.
+#7 14.92 Preparing to unpack .../55-liblerc4_4.0.0+ds-5_arm64.deb ...
+#7 14.92 Unpacking liblerc4:arm64 (4.0.0+ds-5) ...
+#7 14.94 Selecting previously unselected package libsharpyuv0:arm64.
+#7 14.94 Preparing to unpack .../56-libsharpyuv0_1.5.0-0.1_arm64.deb ...
+#7 14.94 Unpacking libsharpyuv0:arm64 (1.5.0-0.1) ...
+#7 14.96 Selecting previously unselected package libwebp7:arm64.
+#7 14.96 Preparing to unpack .../57-libwebp7_1.5.0-0.1_arm64.deb ...
+#7 14.96 Unpacking libwebp7:arm64 (1.5.0-0.1) ...
+#7 14.98 Selecting previously unselected package libtiff6:arm64.
+#7 14.98 Preparing to unpack .../58-libtiff6_4.7.0-3+deb13u3_arm64.deb ...
+#7 14.98 Unpacking libtiff6:arm64 (4.7.0-3+deb13u3) ...
+#7 15.00 Selecting previously unselected package libwebpmux3:arm64.
+#7 15.00 Preparing to unpack .../59-libwebpmux3_1.5.0-0.1_arm64.deb ...
+#7 15.00 Unpacking libwebpmux3:arm64 (1.5.0-0.1) ...
+#7 15.02 Selecting previously unselected package libleptonica6:arm64.
+#7 15.02 Preparing to unpack .../60-libleptonica6_1.84.1-4_arm64.deb ...
+#7 15.02 Unpacking libleptonica6:arm64 (1.84.1-4) ...
+#7 15.08 Selecting previously unselected package libthai-data.
+#7 15.08 Preparing to unpack .../61-libthai-data_0.1.29-2_all.deb ...
+#7 15.08 Unpacking libthai-data (0.1.29-2) ...
+#7 15.10 Selecting previously unselected package libthai0:arm64.
+#7 15.10 Preparing to unpack .../62-libthai0_0.1.29-2+b1_arm64.deb ...
+#7 15.11 Unpacking libthai0:arm64 (0.1.29-2+b1) ...
+#7 15.12 Selecting previously unselected package libpango-1.0-0:arm64.
+#7 15.12 Preparing to unpack .../63-libpango-1.0-0_1.56.3-1_arm64.deb ...
+#7 15.12 Unpacking libpango-1.0-0:arm64 (1.56.3-1) ...
+#7 15.14 Selecting previously unselected package libpangoft2-1.0-0:arm64.
+#7 15.14 Preparing to unpack .../64-libpangoft2-1.0-0_1.56.3-1_arm64.deb ...
+#7 15.14 Unpacking libpangoft2-1.0-0:arm64 (1.56.3-1) ...
+#7 15.16 Selecting previously unselected package libpangocairo-1.0-0:arm64.
+#7 15.16 Preparing to unpack .../65-libpangocairo-1.0-0_1.56.3-1_arm64.deb ...
+#7 15.16 Unpacking libpangocairo-1.0-0:arm64 (1.56.3-1) ...
+#7 15.17 Selecting previously unselected package libtesseract5:arm64.
+#7 15.17 Preparing to unpack .../66-libtesseract5_5.5.0-1+b1_arm64.deb ...
+#7 15.17 Unpacking libtesseract5:arm64 (5.5.0-1+b1) ...
+#7 15.24 Selecting previously unselected package tesseract-ocr-eng.
+#7 15.24 Preparing to unpack .../67-tesseract-ocr-eng_1%3a4.1.0-2_all.deb ...
+#7 15.25 Unpacking tesseract-ocr-eng (1:4.1.0-2) ...
+#7 15.33 Selecting previously unselected package tesseract-ocr-osd.
+#7 15.33 Preparing to unpack .../68-tesseract-ocr-osd_1%3a4.1.0-2_all.deb ...
+#7 15.33 Unpacking tesseract-ocr-osd (1:4.1.0-2) ...
+#7 15.49 Selecting previously unselected package tesseract-ocr.
+#7 15.49 Preparing to unpack .../69-tesseract-ocr_5.5.0-1+b1_arm64.deb ...
+#7 15.50 Unpacking tesseract-ocr (5.5.0-1+b1) ...
+#7 15.54 Setting up libexpat1:arm64 (2.8.3-1~deb13u1) ...
+#7 15.54 Setting up libgraphite2-3:arm64 (1.3.14-2+deb13u1) ...
+#7 15.54 Setting up libpixman-1-0:arm64 (0.44.0-3) ...
+#7 15.54 Setting up libsharpyuv0:arm64 (1.5.0-0.1) ...
+#7 15.55 Setting up libxau6:arm64 (1:1.0.11-1) ...
+#7 15.55 Setting up libxdmcp6:arm64 (1:1.1.5-1) ...
+#7 15.55 Setting up libkeyutils1:arm64 (1.6.3-6) ...
+#7 15.56 Setting up libxcb1:arm64 (1.17.0-2+b1) ...
+#7 15.56 Setting up liblerc4:arm64 (4.0.0+ds-5) ...
+#7 15.56 Setting up libdatrie1:arm64 (0.2.13-3+b1) ...
+#7 15.56 Setting up libxcb-render0:arm64 (1.17.0-2+b1) ...
+#7 15.57 Setting up libbrotli1:arm64 (1.1.0-2+b7) ...
+#7 15.57 Setting up libnghttp2-14:arm64 (1.64.0-1.1+deb13u1) ...
+#7 15.57 Setting up libdeflate0:arm64 (1.23-2) ...
+#7 15.57 Setting up tesseract-ocr-eng (1:4.1.0-2) ...
+#7 15.58 Setting up libxcb-shm0:arm64 (1.17.0-2+b1) ...
+#7 15.58 Setting up libcom-err2:arm64 (1.47.2-3+b12) ...
+#7 15.58 Setting up libgomp1:arm64 (14.2.0-19) ...
+#7 15.59 Setting up libjbig0:arm64 (2.1-6.1+b2) ...
+#7 15.59 Setting up libkrb5support0:arm64 (1.21.3-5+deb13u1) ...
+#7 15.59 Setting up libsasl2-modules-db:arm64 (2.1.28+dfsg1-9) ...
+#7 15.60 Setting up libjpeg62-turbo:arm64 (1:2.1.5-4) ...
+#7 15.60 Setting up libx11-data (2:1.8.12-1) ...
+#7 15.60 Setting up libfribidi0:arm64 (1.0.16-1) ...
+#7 15.60 Setting up libp11-kit0:arm64 (0.25.5-3) ...
+#7 15.61 Setting up libunistring5:arm64 (1.3-2) ...
+#7 15.61 Setting up fonts-dejavu-mono (2.37-8) ...
+#7 15.62 Setting up libpng16-16t64:arm64 (1.6.48-1+deb13u6) ...
+#7 15.62 Setting up libatomic1:arm64 (14.2.0-19) ...
+#7 15.62 Setting up fonts-dejavu-core (2.37-8) ...
+#7 15.64 Setting up libk5crypto3:arm64 (1.21.3-5+deb13u1) ...
+#7 15.64 Setting up libsasl2-2:arm64 (2.1.28+dfsg1-9) ...
+#7 15.64 Setting up libnghttp3-9:arm64 (1.8.0-1) ...
+#7 15.65 Setting up libwebp7:arm64 (1.5.0-0.1) ...
+#7 15.65 Setting up libgif7:arm64 (5.2.2-1+deb13u1) ...
+#7 15.65 Setting up libtiff6:arm64 (4.7.0-3+deb13u3) ...
+#7 15.66 Setting up libtasn1-6:arm64 (4.20.0-2+deb13u1) ...
+#7 15.66 Setting up libopenjp2-7:arm64 (2.5.3-2.1~deb13u2) ...
+#7 15.66 Setting up libx11-6:arm64 (2:1.8.12-1) ...
+#7 15.66 Setting up libthai-data (0.1.29-2) ...
+#7 15.67 Setting up libkrb5-3:arm64 (1.21.3-5+deb13u1) ...
+#7 15.67 Setting up libicu76:arm64 (76.1-4) ...
+#7 15.67 Setting up tesseract-ocr-osd (1:4.1.0-2) ...
+#7 15.68 Setting up libssh2-1t64:arm64 (1.11.1-1+deb13u2) ...
+#7 15.68 Setting up libwebpmux3:arm64 (1.5.0-0.1) ...
+#7 15.68 Setting up libxml2:arm64 (2.12.7+dfsg+really2.9.14-2.1+deb13u3) ...
+#7 15.68 Setting up libldap2:arm64 (2.6.10+dfsg-1) ...
+#7 15.69 Setting up libxrender1:arm64 (1:0.9.12-1) ...
+#7 15.69 Setting up fontconfig-config (2.15.0-2.3) ...
+#7 15.73 debconf: unable to initialize frontend: Dialog
+#7 15.73 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#7 15.73 debconf: falling back to frontend: Readline
+#7 15.73 debconf: unable to initialize frontend: Readline
+#7 15.73 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC entries checked: /etc/perl /usr/local/lib/aarch64-linux-gnu/perl/5.40.1 /usr/local/share/perl/5.40.1 /usr/lib/aarch64-linux-gnu/perl5/5.40 /usr/share/perl5 /usr/lib/aarch64-linux-gnu/perl-base /usr/lib/aarch64-linux-gnu/perl/5.40 /usr/share/perl/5.40 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 8.)
+#7 15.73 debconf: falling back to frontend: Teletype
+#7 15.73 debconf: unable to initialize frontend: Teletype
+#7 15.73 debconf: (This frontend requires a controlling tty.)
+#7 15.73 debconf: falling back to frontend: Noninteractive
+#7 15.75 Setting up libxext6:arm64 (2:1.3.4-1+b3) ...
+#7 15.75 Setting up libleptonica6:arm64 (1.84.1-4) ...
+#7 15.76 Setting up libidn2-0:arm64 (2.3.8-2) ...
+#7 15.76 Setting up libthai0:arm64 (0.1.29-2+b1) ...
+#7 15.76 Setting up libglib2.0-0t64:arm64 (2.84.4-3~deb13u5) ...
+#7 15.77 No schema files found: doing nothing.
+#7 15.77 Setting up libfreetype6:arm64 (2.13.3+dfsg-1+deb13u1) ...
+#7 15.77 Setting up libgssapi-krb5-2:arm64 (1.21.3-5+deb13u1) ...
+#7 15.77 Setting up libharfbuzz0b:arm64 (10.2.0-1+deb13u1) ...
+#7 15.78 Setting up libfontconfig1:arm64 (2.15.0-2.3) ...
+#7 15.78 Setting up libarchive13t64:arm64 (3.7.4-4+deb13u1) ...
+#7 15.78 Setting up libgnutls30t64:arm64 (3.8.9-3+deb13u4) ...
+#7 15.79 Setting up fontconfig (2.15.0-2.3) ...
+#7 15.79 Regenerating fonts cache... done.
+#7 17.81 Setting up libpango-1.0-0:arm64 (1.56.3-1) ...
+#7 17.82 Setting up libpsl5t64:arm64 (0.21.2-1.1+b1) ...
+#7 17.82 Setting up libcairo2:arm64 (1.18.4-1+b1) ...
+#7 17.83 Setting up librtmp1:arm64 (2.4+20151223.gitfa8646d.1-2+b5) ...
+#7 17.83 Setting up libpangoft2-1.0-0:arm64 (1.56.3-1) ...
+#7 17.84 Setting up libpangocairo-1.0-0:arm64 (1.56.3-1) ...
+#7 17.84 Setting up libcurl4t64:arm64 (8.14.1-2+deb13u7) ...
+#7 17.85 Setting up libtesseract5:arm64 (5.5.0-1+b1) ...
+#7 17.85 Setting up tesseract-ocr (5.5.0-1+b1) ...
+#7 17.86 Processing triggers for libc-bin (2.41-12+deb13u4) ...
+#7 DONE 18.0s
+
+#8 [api 3/8] WORKDIR /code
+#8 DONE 0.0s
+
+#9 [api 4/8] COPY requirements.lock .
+#9 DONE 0.0s
+
+#10 [worker 5/8] RUN pip install --no-cache-dir -r requirements.lock
+#10 1.425 Collecting alembic==1.20.0 (from -r requirements.lock (line 1))
+#10 1.830   Downloading alembic-1.20.0-py3-none-any.whl.metadata (7.3 kB)
+#10 1.976 Collecting annotated-doc==0.0.5 (from -r requirements.lock (line 2))
+#10 2.101   Downloading annotated_doc-0.0.5-py3-none-any.whl.metadata (6.5 kB)
+#10 2.255 Collecting annotated-types==0.8.0 (from -r requirements.lock (line 3))
+#10 2.381   Downloading annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+#10 2.573 Collecting anyio==4.15.1 (from -r requirements.lock (line 4))
+#10 2.698   Downloading anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)
+#10 2.880 Collecting argon2-cffi==25.1.0 (from -r requirements.lock (line 5))
+#10 3.003   Downloading argon2_cffi-25.1.0-py3-none-any.whl.metadata (4.1 kB)
+#10 3.165 Collecting argon2-cffi-bindings==26.1.0 (from -r requirements.lock (line 6))
+#10 3.289   Downloading argon2_cffi_bindings-26.1.0-cp310-abi3-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl.metadata (7.5 kB)
+#10 4.022 Collecting boto3==1.43.110 (from -r requirements.lock (line 7))
+#10 4.144   Downloading boto3-1.43.110-py3-none-any.whl.metadata (6.6 kB)
+#10 4.620 Collecting botocore==1.43.110 (from -r requirements.lock (line 8))
+#10 4.740   Downloading botocore-1.43.110-py3-none-any.whl.metadata (5.6 kB)
+#10 4.900 Collecting certifi==2026.7.22 (from -r requirements.lock (line 9))
+#10 5.031   Downloading certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)
+#10 5.251 Collecting cffi==2.1.1 (from -r requirements.lock (line 10))
+#10 5.372   Downloading cffi-2.1.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl.metadata (2.5 kB)
+#10 5.607 Collecting charset-normalizer==3.5.2 (from -r requirements.lock (line 11))
+#10 5.729   Downloading charset_normalizer-3.5.2-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (46 kB)
+#10 6.003 Collecting click==8.5.0 (from -r requirements.lock (line 12))
+#10 6.127   Downloading click-8.5.0-py3-none-any.whl.metadata (2.6 kB)
+#10 6.392 Collecting cryptography==50.0.2 (from -r requirements.lock (line 13))
+#10 6.512   Downloading cryptography-50.0.2-cp311-abi3-manylinux_2_34_aarch64.whl.metadata (4.4 kB)
+#10 6.655 Collecting distro==1.9.0 (from -r requirements.lock (line 14))
+#10 6.782   Downloading distro-1.9.0-py3-none-any.whl.metadata (6.8 kB)
+#10 6.974 Collecting fastapi==0.143.0 (from -r requirements.lock (line 15))
+#10 7.097   Downloading fastapi-0.143.0-py3-none-any.whl.metadata (26 kB)
+#10 7.271 Collecting fastembed==0.9.0 (from -r requirements.lock (line 16))
+#10 7.397   Downloading fastembed-0.9.0-py3-none-any.whl.metadata (11 kB)
+#10 7.563 Collecting filelock==4.0.12 (from -r requirements.lock (line 17))
+#10 7.691   Downloading filelock-4.0.12-py3-none-any.whl.metadata (2.0 kB)
+#10 7.840 Collecting flatbuffers==25.12.19 (from -r requirements.lock (line 18))
+#10 7.964   Downloading flatbuffers-25.12.19-py2.py3-none-any.whl.metadata (1.0 kB)
+#10 8.121 Collecting fsspec==2026.9.0 (from -r requirements.lock (line 19))
+#10 8.245   Downloading fsspec-2026.9.0-py3-none-any.whl.metadata (10 kB)
+#10 8.454 Collecting google-auth==2.61.0 (from -r requirements.lock (line 20))
+#10 8.579   Downloading google_auth-2.61.0-py3-none-any.whl.metadata (6.0 kB)
+#10 8.762 Collecting google-genai==2.29.0 (from -r requirements.lock (line 21))
+#10 8.887   Downloading google_genai-2.29.0-py3-none-any.whl.metadata (57 kB)
+#10 9.074 Collecting h11==0.16.0 (from -r requirements.lock (line 22))
+#10 9.199   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+#10 9.374 Collecting hf-xet==1.7.0 (from -r requirements.lock (line 23))
+#10 9.500   Downloading hf_xet-1.7.0-cp38-abi3-manylinux_2_28_aarch64.whl.metadata (4.9 kB)
+#10 9.654 Collecting httpcore==1.0.9 (from -r requirements.lock (line 24))
+#10 9.779   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+#10 9.990 Collecting httptools==0.8.0 (from -r requirements.lock (line 25))
+#10 10.11   Downloading httptools-0.8.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (3.5 kB)
+#10 10.26 Collecting httpx==0.28.1 (from -r requirements.lock (line 26))
+#10 10.39   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+#10 10.58 Collecting huggingface_hub==1.33.0 (from -r requirements.lock (line 27))
+#10 10.71   Downloading huggingface_hub-1.33.0-py3-none-any.whl.metadata (16 kB)
+#10 10.88 Collecting idna==3.20 (from -r requirements.lock (line 28))
+#10 11.01   Downloading idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+#10 11.15 Collecting iniconfig==2.3.1 (from -r requirements.lock (line 29))
+#10 11.28   Downloading iniconfig-2.3.1-py3-none-any.whl.metadata (2.8 kB)
+#10 11.42 Collecting jmespath==1.1.0 (from -r requirements.lock (line 30))
+#10 11.54   Downloading jmespath-1.1.0-py3-none-any.whl.metadata (7.6 kB)
+#10 11.69 Collecting loguru==0.7.3 (from -r requirements.lock (line 31))
+#10 11.82   Downloading loguru-0.7.3-py3-none-any.whl.metadata (22 kB)
+#10 11.98 Collecting Mako==1.4.3 (from -r requirements.lock (line 32))
+#10 12.11   Downloading mako-1.4.3-py3-none-any.whl.metadata (2.9 kB)
+#10 12.30 Collecting MarkupSafe==3.0.4 (from -r requirements.lock (line 33))
+#10 12.42   Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (2.7 kB)
+#10 12.63 Collecting mmh3==5.3.1 (from -r requirements.lock (line 34))
+#10 12.75   Downloading mmh3-5.3.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (13 kB)
+#10 13.04 Collecting numpy==2.5.3 (from -r requirements.lock (line 35))
+#10 13.16   Downloading numpy-2.5.3-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl.metadata (6.6 kB)
+#10 13.36 Collecting onnxruntime==1.31.0 (from -r requirements.lock (line 36))
+#10 13.48   Downloading onnxruntime-1.31.0-cp312-cp312-manylinux_2_28_aarch64.whl.metadata (5.7 kB)
+#10 13.64 Collecting opentelemetry-api==1.45.1 (from -r requirements.lock (line 37))
+#10 13.77   Downloading opentelemetry_api-1.45.1-py3-none-any.whl.metadata (1.4 kB)
+#10 13.92 Collecting packaging==26.3 (from -r requirements.lock (line 38))
+#10 14.05   Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+#10 14.20 Collecting pgvector==0.5.1 (from -r requirements.lock (line 39))
+#10 14.33   Downloading pgvector-0.5.1-py3-none-any.whl.metadata (19 kB)
+#10 14.62 Collecting pillow==12.3.0 (from -r requirements.lock (line 40))
+#10 14.74   Downloading pillow-12.3.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl.metadata (9.1 kB)
+#10 14.89 Collecting pluggy==1.6.0 (from -r requirements.lock (line 41))
+#10 15.01   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+#10 15.26 Collecting protobuf==7.36.2 (from -r requirements.lock (line 42))
+#10 15.38   Downloading protobuf-7.36.2-cp310-abi3-manylinux2014_aarch64.whl.metadata (595 bytes)
+#10 15.53 Collecting psycopg==3.3.6 (from -r requirements.lock (line 43))
+#10 15.65   Downloading psycopg-3.3.6-py3-none-any.whl.metadata (4.4 kB)
+#10 15.94 Collecting psycopg-binary==3.3.6 (from -r requirements.lock (line 44))
+#10 16.06   Downloading psycopg_binary-3.3.6-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl.metadata (2.7 kB)
+#10 16.22 Collecting py_rust_stemmers==0.1.8 (from -r requirements.lock (line 45))
+#10 16.34   Downloading py_rust_stemmers-0.1.8-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (3.5 kB)
+#10 16.51 Collecting pyasn1==0.6.4 (from -r requirements.lock (line 46))
+#10 16.63   Downloading pyasn1-0.6.4-py3-none-any.whl.metadata (8.4 kB)
+#10 16.79 Collecting pyasn1_modules==0.4.2 (from -r requirements.lock (line 47))
+#10 16.91   Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+#10 17.06 Collecting pycparser==3.11 (from -r requirements.lock (line 48))
+#10 17.18   Downloading pycparser-3.11-py3-none-any.whl.metadata (8.2 kB)
+#10 17.41 Collecting pydantic==2.14.0 (from -r requirements.lock (line 49))
+#10 17.53   Downloading pydantic-2.14.0-py3-none-any.whl.metadata (131 kB)
+#10 17.82 Collecting pydantic-settings==2.15.0 (from -r requirements.lock (line 50))
+#10 17.94   Downloading pydantic_settings-2.15.0-py3-none-any.whl.metadata (3.9 kB)
+#10 18.57 Collecting pydantic_core==2.50.0 (from -r requirements.lock (line 51))
+#10 18.70   Downloading pydantic_core-2.50.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (6.5 kB)
+#10 18.85 Collecting Pygments==2.21.0 (from -r requirements.lock (line 52))
+#10 19.30   Downloading pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+#10 19.46 Collecting PyJWT==2.15.1 (from -r requirements.lock (line 53))
+#10 19.59   Downloading pyjwt-2.15.1-py3-none-any.whl.metadata (3.5 kB)
+#10 19.84 Collecting pymupdf==1.28.2 (from -r requirements.lock (line 54))
+#10 19.96   Downloading pymupdf-1.28.2-cp310-abi3-manylinux_2_28_aarch64.whl.metadata (26 kB)
+#10 20.11 Collecting pytesseract==0.3.13 (from -r requirements.lock (line 55))
+#10 20.23   Downloading pytesseract-0.3.13-py3-none-any.whl.metadata (11 kB)
+#10 20.45 Collecting pytest==9.1.1 (from -r requirements.lock (line 56))
+#10 20.57   Downloading pytest-9.1.1-py3-none-any.whl.metadata (7.6 kB)
+#10 20.72 Collecting python-dateutil==2.9.0.post0 (from -r requirements.lock (line 57))
+#10 20.84   Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+#10 20.99 Collecting python-dotenv==1.2.4 (from -r requirements.lock (line 58))
+#10 21.12   Downloading python_dotenv-1.2.4-py3-none-any.whl.metadata (29 kB)
+#10 21.27 Collecting python-multipart==0.0.32 (from -r requirements.lock (line 59))
+#10 21.39   Downloading python_multipart-0.0.32-py3-none-any.whl.metadata (2.1 kB)
+#10 21.56 Collecting PyYAML==6.0.3 (from -r requirements.lock (line 60))
+#10 21.69   Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (2.4 kB)
+#10 21.85 Collecting requests==2.34.2 (from -r requirements.lock (line 61))
+#10 21.98   Downloading requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+#10 22.14 Collecting s3transfer==0.19.2 (from -r requirements.lock (line 62))
+#10 22.26   Downloading s3transfer-0.19.2-py3-none-any.whl.metadata (1.7 kB)
+#10 22.41 Collecting six==1.17.0 (from -r requirements.lock (line 63))
+#10 22.53   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+#10 22.67 Collecting sniffio==1.3.1 (from -r requirements.lock (line 64))
+#10 22.80   Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+#10 23.12 Collecting SQLAlchemy==2.1.4 (from -r requirements.lock (line 65))
+#10 23.24   Downloading sqlalchemy-2.1.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (9.7 kB)
+#10 23.41 Collecting starlette==1.7.0 (from -r requirements.lock (line 66))
+#10 23.54   Downloading starlette-1.7.0-py3-none-any.whl.metadata (6.6 kB)
+#10 23.69 Collecting tenacity==9.1.4 (from -r requirements.lock (line 67))
+#10 23.82   Downloading tenacity-9.1.4-py3-none-any.whl.metadata (1.2 kB)
+#10 24.05 Collecting tokenizers==0.23.3 (from -r requirements.lock (line 68))
+#10 24.17   Downloading tokenizers-0.23.3-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (9.8 kB)
+#10 24.34 Collecting tqdm==4.70.1 (from -r requirements.lock (line 69))
+#10 24.46   Downloading tqdm-4.70.1-py3-none-any.whl.metadata (57 kB)
+#10 24.62 Collecting typing-inspection==0.4.4 (from -r requirements.lock (line 70))
+#10 24.75   Downloading typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)
+#10 24.90 Collecting typing_extensions==4.16.0 (from -r requirements.lock (line 71))
+#10 25.03   Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+#10 25.19 Collecting urllib3==2.8.0 (from -r requirements.lock (line 72))
+#10 25.31   Downloading urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+#10 25.48 Collecting uvicorn==0.54.0 (from -r requirements.lock (line 73))
+#10 25.61   Downloading uvicorn-0.54.0-py3-none-any.whl.metadata (6.6 kB)
+#10 25.84 Collecting uvloop==0.23.0 (from -r requirements.lock (line 74))
+#10 25.96   Downloading uvloop-0.23.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (5.1 kB)
+#10 26.18 Collecting watchfiles==1.3.0 (from -r requirements.lock (line 75))
+#10 26.30   Downloading watchfiles-1.3.0-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (4.9 kB)
+#10 26.53 Collecting websockets==16.1.1 (from -r requirements.lock (line 76))
+#10 26.65   Downloading websockets-16.1.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (6.8 kB)
+#10 27.22 Downloading alembic-1.20.0-py3-none-any.whl (268 kB)
+#10 27.47 Downloading annotated_doc-0.0.5-py3-none-any.whl (5.3 kB)
+#10 27.59 Downloading annotated_types-0.8.0-py3-none-any.whl (13 kB)
+#10 27.72 Downloading anyio-4.15.1-py3-none-any.whl (132 kB)
+#10 27.85 Downloading argon2_cffi-25.1.0-py3-none-any.whl (14 kB)
+#10 27.98 Downloading argon2_cffi_bindings-26.1.0-cp310-abi3-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl (27 kB)
+#10 28.11 Downloading boto3-1.43.110-py3-none-any.whl (140 kB)
+#10 28.25 Downloading botocore-1.43.110-py3-none-any.whl (16.0 MB)
+#10 30.28    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.0/16.0 MB 7.9 MB/s eta 0:00:00
+#10 30.41 Downloading certifi-2026.7.22-py3-none-any.whl (136 kB)
+#10 30.55 Downloading cffi-2.1.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl (222 kB)
+#10 30.71 Downloading charset_normalizer-3.5.2-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (246 kB)
+#10 30.86 Downloading click-8.5.0-py3-none-any.whl (125 kB)
+#10 31.01 Downloading cryptography-50.0.2-cp311-abi3-manylinux_2_34_aarch64.whl (4.7 MB)
+#10 31.82    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.7/4.7 MB 5.8 MB/s eta 0:00:00
+#10 31.95 Downloading distro-1.9.0-py3-none-any.whl (20 kB)
+#10 32.08 Downloading fastapi-0.143.0-py3-none-any.whl (144 kB)
+#10 32.22 Downloading fastembed-0.9.0-py3-none-any.whl (142 kB)
+#10 32.36 Downloading filelock-4.0.12-py3-none-any.whl (111 kB)
+#10 32.50 Downloading flatbuffers-25.12.19-py2.py3-none-any.whl (26 kB)
+#10 32.62 Downloading fsspec-2026.9.0-py3-none-any.whl (221 kB)
+#10 32.77 Downloading google_auth-2.61.0-py3-none-any.whl (268 kB)
+#10 32.93 Downloading google_genai-2.29.0-py3-none-any.whl (1.2 MB)
+#10 33.11    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 6.4 MB/s eta 0:00:00
+#10 33.24 Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+#10 33.37 Downloading hf_xet-1.7.0-cp38-abi3-manylinux_2_28_aarch64.whl (4.0 MB)
+#10 34.01    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.0/4.0 MB 6.2 MB/s eta 0:00:00
+#10 34.13 Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+#10 34.27 Downloading httptools-0.8.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (518 kB)
+#10 34.46 Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+#10 34.59 Downloading huggingface_hub-1.33.0-py3-none-any.whl (846 kB)
+#10 34.72    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 846.4/846.4 kB 6.0 MB/s eta 0:00:00
+#10 34.84 Downloading idna-3.20-py3-none-any.whl (69 kB)
+#10 34.97 Downloading iniconfig-2.3.1-py3-none-any.whl (7.6 kB)
+#10 35.10 Downloading jmespath-1.1.0-py3-none-any.whl (20 kB)
+#10 35.22 Downloading loguru-0.7.3-py3-none-any.whl (61 kB)
+#10 35.35 Downloading mako-1.4.3-py3-none-any.whl (80 kB)
+#10 35.48 Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (24 kB)
+#10 35.61 Downloading mmh3-5.3.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (106 kB)
+#10 35.75 Downloading numpy-2.5.3-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl (15.7 MB)
+#10 38.15    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 15.7/15.7 MB 6.5 MB/s eta 0:00:00
+#10 38.28 Downloading onnxruntime-1.31.0-cp312-cp312-manylinux_2_28_aarch64.whl (21.4 MB)
+#10 41.49    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 21.4/21.4 MB 6.7 MB/s eta 0:00:00
+#10 41.61 Downloading opentelemetry_api-1.45.1-py3-none-any.whl (60 kB)
+#10 41.74 Downloading packaging-26.3-py3-none-any.whl (129 kB)
+#10 41.88 Downloading pgvector-0.5.1-py3-none-any.whl (31 kB)
+#10 42.01 Downloading pillow-12.3.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl (6.3 MB)
+#10 42.94    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.3/6.3 MB 6.7 MB/s eta 0:00:00
+#10 43.06 Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+#10 43.19 Downloading protobuf-7.36.2-cp310-abi3-manylinux2014_aarch64.whl (344 kB)
+#10 43.35 Downloading psycopg-3.3.6-py3-none-any.whl (215 kB)
+#10 43.50 Downloading psycopg_binary-3.3.6-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl (6.8 MB)
+#10 44.51    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.8/6.8 MB 6.8 MB/s eta 0:00:00
+#10 44.63 Downloading py_rust_stemmers-0.1.8-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (316 kB)
+#10 44.79 Downloading pyasn1-0.6.4-py3-none-any.whl (84 kB)
+#10 44.92 Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+#10 45.07 Downloading pycparser-3.11-py3-none-any.whl (51 kB)
+#10 45.20 Downloading pydantic-2.14.0-py3-none-any.whl (487 kB)
+#10 45.37 Downloading pydantic_settings-2.15.0-py3-none-any.whl (69 kB)
+#10 45.51 Downloading pydantic_core-2.50.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (2.0 MB)
+#10 45.79    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.0/2.0 MB 7.0 MB/s eta 0:00:00
+#10 45.92 Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+#10 46.09    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 7.2 MB/s eta 0:00:00
+#10 46.21 Downloading pyjwt-2.15.1-py3-none-any.whl (33 kB)
+#10 46.34 Downloading pymupdf-1.28.2-cp310-abi3-manylinux_2_28_aarch64.whl (25.1 MB)
+#10 49.83    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.1/25.1 MB 7.2 MB/s eta 0:00:00
+#10 49.96 Downloading pytesseract-0.3.13-py3-none-any.whl (14 kB)
+#10 50.09 Downloading pytest-9.1.1-py3-none-any.whl (386 kB)
+#10 50.34 Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+#10 50.53 Downloading python_dotenv-1.2.4-py3-none-any.whl (23 kB)
+#10 50.65 Downloading python_multipart-0.0.32-py3-none-any.whl (30 kB)
+#10 50.78 Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (775 kB)
+#10 51.04    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 775.1/775.1 kB 2.8 MB/s eta 0:00:00
+#10 51.17 Downloading requests-2.34.2-py3-none-any.whl (73 kB)
+#10 51.31 Downloading s3transfer-0.19.2-py3-none-any.whl (90 kB)
+#10 51.45 Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+#10 51.58 Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+#10 51.71 Downloading sqlalchemy-2.1.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (4.7 MB)
+#10 53.16    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.7/4.7 MB 3.2 MB/s eta 0:00:00
+#10 53.29 Downloading starlette-1.7.0-py3-none-any.whl (78 kB)
+#10 53.43 Downloading tenacity-9.1.4-py3-none-any.whl (28 kB)
+#10 53.55 Downloading tokenizers-0.23.3-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (3.5 MB)
+#10 54.58    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.5/3.5 MB 3.4 MB/s eta 0:00:00
+#10 55.03 Downloading tqdm-4.70.1-py3-none-any.whl (80 kB)
+#10 55.17 Downloading typing_inspection-0.4.4-py3-none-any.whl (14 kB)
+#10 55.30 Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+#10 55.43 Downloading urllib3-2.8.0-py3-none-any.whl (135 kB)
+#10 55.59 Downloading uvicorn-0.54.0-py3-none-any.whl (87 kB)
+#10 55.73 Downloading uvloop-0.23.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (4.4 MB)
+#10 57.01    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.4/4.4 MB 3.4 MB/s eta 0:00:00
+#10 57.13 Downloading watchfiles-1.3.0-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (454 kB)
+#10 57.39 Downloading websockets-16.1.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (188 kB)
+#10 57.66 Installing collected packages: flatbuffers, websockets, uvloop, urllib3, typing_extensions, tqdm, tenacity, sniffio, six, PyYAML, python-multipart, python-dotenv, pymupdf, PyJWT, Pygments, pycparser, pyasn1, py_rust_stemmers, psycopg-binary, protobuf, pluggy, pillow, pgvector, packaging, numpy, mmh3, MarkupSafe, loguru, jmespath, iniconfig, idna, httptools, hf-xet, h11, fsspec, filelock, distro, click, charset-normalizer, certifi, annotated-types, annotated-doc, uvicorn, typing-inspection, SQLAlchemy, requests, python-dateutil, pytest, pytesseract, pydantic_core, pyasn1_modules, psycopg, opentelemetry-api, onnxruntime, Mako, httpcore, cffi, anyio, watchfiles, starlette, pydantic, httpx, cryptography, botocore, argon2-cffi-bindings, alembic, s3transfer, pydantic-settings, huggingface_hub, google-auth, fastapi, argon2-cffi, tokenizers, boto3, google-genai, fastembed
+#10 67.16 Successfully installed Mako-1.4.3 MarkupSafe-3.0.4 PyJWT-2.15.1 PyYAML-6.0.3 Pygments-2.21.0 SQLAlchemy-2.1.4 alembic-1.20.0 annotated-doc-0.0.5 annotated-types-0.8.0 anyio-4.15.1 argon2-cffi-25.1.0 argon2-cffi-bindings-26.1.0 boto3-1.43.110 botocore-1.43.110 certifi-2026.7.22 cffi-2.1.1 charset-normalizer-3.5.2 click-8.5.0 cryptography-50.0.2 distro-1.9.0 fastapi-0.143.0 fastembed-0.9.0 filelock-4.0.12 flatbuffers-25.12.19 fsspec-2026.9.0 google-auth-2.61.0 google-genai-2.29.0 h11-0.16.0 hf-xet-1.7.0 httpcore-1.0.9 httptools-0.8.0 httpx-0.28.1 huggingface_hub-1.33.0 idna-3.20 iniconfig-2.3.1 jmespath-1.1.0 loguru-0.7.3 mmh3-5.3.1 numpy-2.5.3 onnxruntime-1.31.0 opentelemetry-api-1.45.1 packaging-26.3 pgvector-0.5.1 pillow-12.3.0 pluggy-1.6.0 protobuf-7.36.2 psycopg-3.3.6 psycopg-binary-3.3.6 py_rust_stemmers-0.1.8 pyasn1-0.6.4 pyasn1_modules-0.4.2 pycparser-3.11 pydantic-2.14.0 pydantic-settings-2.15.0 pydantic_core-2.50.0 pymupdf-1.28.2 pytesseract-0.3.13 pytest-9.1.1 python-dateutil-2.9.0.post0 python-dotenv-1.2.4 python-multipart-0.0.32 requests-2.34.2 s3transfer-0.19.2 six-1.17.0 sniffio-1.3.1 starlette-1.7.0 tenacity-9.1.4 tokenizers-0.23.3 tqdm-4.70.1 typing-inspection-0.4.4 typing_extensions-4.16.0 urllib3-2.8.0 uvicorn-0.54.0 uvloop-0.23.0 watchfiles-1.3.0 websockets-16.1.1
+#10 67.16 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#10 67.68 
+#10 67.68 [notice] A new release of pip is available: 25.0.1 -> 26.2.1
+#10 67.68 [notice] To update, run: pip install --upgrade pip
+#10 DONE 68.5s
+
+#11 [api 6/8] RUN python -c "from fastembed import TextEmbedding; TextEmbedding('BAAI/bge-small-en-v1.5', cache_dir='/models')"
+#11 2.130 Fetching 5 files:   0%|          | 0/5 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+#11 2.494 Fetching 5 files:  20%|██        | 1/5 [00:00<00:01,  2.75it/s]Fetching 5 files:  80%|████████  | 4/5 [00:00<00:00,  8.12it/s]Fetching 5 files: 100%|██████████| 5/5 [00:13<00:00,  3.78s/it]Fetching 5 files: 100%|██████████| 5/5 [00:13<00:00,  2.76s/it]
+#11 DONE 16.2s
+
+#12 [api 7/8] RUN python -c "from fastembed.rerank.cross_encoder import TextCrossEncoder; TextCrossEncoder('Xenova/ms-marco-MiniLM-L-6-v2', cache_dir='/models')"
+#12 1.566 Fetching 5 files:   0%|          | 0/5 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+#12 2.022 Fetching 5 files:  20%|██        | 1/5 [00:00<00:01,  2.19it/s]Fetching 5 files:  80%|████████  | 4/5 [00:00<00:00,  8.77it/s]Fetching 5 files: 100%|██████████| 5/5 [00:16<00:00,  3.27s/it]
+#12 DONE 18.2s
+
+#13 [worker 8/8] COPY app ./app
+#13 DONE 0.0s
+
+#14 [worker] exporting to image
+#14 exporting layers
+#14 ...
+
+#15 [api] exporting to image
+#15 exporting layers 10.8s done
+#15 exporting manifest sha256:7950e6d32780780370ec9a6c574eeeaca0bd74288f00631beaec12db7f1b3f54 done
+#15 exporting config sha256:e9a16a6438df2d9439b0787ec3aabf831db8d59114b39e6da2a592ee04b6ae5c done
+#15 exporting attestation manifest sha256:d5207adb906d466f66dc8e5a887b6bf0b73e8841a81b14a985acb83b5cdce21b done
+#15 exporting manifest list sha256:f3423f182d4de59658f628b293ea7c4f3732164f9be5e5b84c837ddfac0bf5f6 0.0s done
+#15 naming to docker.io/library/ka-clean-api:latest done
+#15 unpacking to docker.io/library/ka-clean-api:latest
+#15 ...
+
+#14 [worker] exporting to image
+#14 exporting layers 10.8s done
+#14 exporting manifest sha256:a2bab789ed7ae42679de2a3127ad583389c85ac3d1e9bfa2388048b3e4de9bcc 0.0s done
+#14 exporting config sha256:9097117a4cadf27bb99278d5d7b88a2b65316030e2d292d2aa57d920383ad147 done
+#14 exporting attestation manifest sha256:86471a10280f3810fbc0e695517b9d3542df5ce97acf13f01bb70a42ee2829be 0.0s done
+#14 exporting manifest list sha256:1a7ee2f6a253c469d9cd0d3ae1e92f460dca13627cf348010933c1396c2ad4e8 0.0s done
+#14 naming to docker.io/library/ka-clean-worker:latest done
+#14 unpacking to docker.io/library/ka-clean-worker:latest
+#14 unpacking to docker.io/library/ka-clean-worker:latest 5.2s done
+#14 DONE 16.0s
+
+#15 [api] exporting to image
+#15 unpacking to docker.io/library/ka-clean-api:latest 5.2s done
+#15 DONE 16.0s
+
+#16 [worker] resolving provenance for metadata file
+#16 DONE 0.0s
+
+#17 [api] resolving provenance for metadata file
+#17 DONE 0.0s
+ Image ka-clean-worker Built 
+ Image ka-clean-api Built 
+ Network ka-clean_default Creating 
+ Volume ka-clean_storagedata Creating 
+ Volume ka-clean_pgdata Creating 
+ Volume ka-clean_storagedata Creating 
+ Network ka-clean_default Creating 
+ Volume ka-clean_pgdata Creating 
+ Volume ka-clean_pgdata Created 
+ Volume ka-clean_pgdata Created 
+ Volume ka-clean_storagedata Created 
+ Volume ka-clean_storagedata Created 
+ Network ka-clean_default Created 
+ Network ka-clean_default Created 
+ Container ka-clean-storage-1 Creating 
+ Container ka-clean-db-1 Creating 
+ Container ka-clean-db-1 Created 
+ Container ka-clean-storage-1 Created 
+ Container ka-clean-api-1 Creating 
+ Container ka-clean-worker-1 Creating 
+ Container ka-clean-api-1 Created 
+ Container ka-clean-worker-1 Created 
+ Container ka-clean-db-1 Starting 
+ Container ka-clean-storage-1 Starting 
+ Container ka-clean-db-1 Started 
+ Container ka-clean-storage-1 Started 
+ Container ka-clean-db-1 Waiting 
+ Container ka-clean-db-1 Waiting 
+ Container ka-clean-db-1 Healthy 
+ Container ka-clean-api-1 Starting 
+ Container ka-clean-db-1 Healthy 
+ Container ka-clean-worker-1 Starting 
+ Container ka-clean-api-1 Started 
+ Container ka-clean-worker-1 Started 
+ Container ka-clean-api-1 Waiting 
+ Container ka-clean-worker-1 Waiting 
+ Container ka-clean-db-1 Waiting 
+ Container ka-clean-storage-1 Waiting 
+ Container ka-clean-worker-1 Healthy 
+ Container ka-clean-db-1 Healthy 
+ Container ka-clean-api-1 Healthy 
+ Container ka-clean-storage-1 Healthy 
+NAME                 IMAGE                    COMMAND                  SERVICE   CREATED         STATUS                   PORTS
+ka-clean-api-1       ka-clean-api             "uvicorn app.main:ap…"   api       6 seconds ago   Up Less than a second    0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+ka-clean-db-1        pgvector/pgvector:pg16   "docker-entrypoint.s…"   db        7 seconds ago   Up 6 seconds (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+ka-clean-storage-1   rustfs/rustfs:latest     "/entrypoint.sh rust…"   storage   7 seconds ago   Up 5 seconds             0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+ka-clean-worker-1    ka-clean-worker          "python -m app.worke…"   worker    6 seconds ago   Up Less than a second    
+
+===== 13:37:01 3. Database migration (fresh, empty database) =====
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> ad92c4ac5ccb, initial schema
+INFO  [alembic.runtime.migration] Running upgrade ad92c4ac5ccb -> 94a1fedfb71d, seed permission matrix
+INFO  [alembic.runtime.migration] Running upgrade 94a1fedfb71d -> 031dbfec18c5, add processing_started_at
+INFO  [alembic.runtime.migration] Running upgrade 031dbfec18c5 -> 6b819f518552, chunks embeddings index contract
+INFO  [alembic.runtime.migration] Running upgrade 6b819f518552 -> 17ff2353d473, chunk suspected_injection flag
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+17ff2353d473 (head)
+ Container ka-clean-worker-1 Restarting 
+ Container ka-clean-worker-1 Started 
+NAME                 IMAGE                    COMMAND                  SERVICE   CREATED          STATUS                    PORTS
+ka-clean-api-1       ka-clean-api             "uvicorn app.main:ap…"   api       12 seconds ago   Up 7 seconds              0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+ka-clean-db-1        pgvector/pgvector:pg16   "docker-entrypoint.s…"   db        13 seconds ago   Up 12 seconds (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+ka-clean-storage-1   rustfs/rustfs:latest     "/entrypoint.sh rust…"   storage   13 seconds ago   Up 12 seconds             0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+ka-clean-worker-1    ka-clean-worker          "python -m app.worke…"   worker    12 seconds ago   Up 5 seconds              
+
+===== 13:37:07 4. Automated tests =====
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+100 passed, 1 warning in 5.87s
+
+===== 13:37:14 5. Development retrieval evaluation =====
+NOTICE:  database "knowledge_eval" does not exist, skipping
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> ad92c4ac5ccb, initial schema
+INFO  [alembic.runtime.migration] Running upgrade ad92c4ac5ccb -> 94a1fedfb71d, seed permission matrix
+INFO  [alembic.runtime.migration] Running upgrade 94a1fedfb71d -> 031dbfec18c5, add processing_started_at
+INFO  [alembic.runtime.migration] Running upgrade 031dbfec18c5 -> 6b819f518552, chunks embeddings index contract
+INFO  [alembic.runtime.migration] Running upgrade 6b819f518552 -> 17ff2353d473, chunk suspected_injection flag
+Seeded 32 documents: 32 published, 1 superseded
+# Retrieval evaluation: dev set
+
+- Run: 2026-10-15 08:37 UTC
+- Corpus version: 2026-10-11.1
+- Question file: questions_dev.json (sha256 92e4737bc610)
+- Embedding model: BAAI/bge-small-en-v1.5 (index 1)
+- k = 5, candidates per search = 20, RRF k = 60
+
+## Summary
+
+| Metric | Value |
+| --- | --- |
+| Answerable questions | 32 |
+| Recall@1 (correct page ranked first) | 96.9% (31/32) |
+| Recall@5 (correct page) | 100.0% (32/32) |
+| Recall@5 (correct document) | 100.0% (32/32) |
+| MRR (correct page) | 0.984 |
+| Restricted questions / leaked results | 5 / 0 |
+| Results from superseded versions | 0 |
+
+## By access group (answerable)
+
+| Group | Questions | Recall@1 | Recall@k | MRR |
+| --- | --- | --- | --- | --- |
+| general | 5 | 100.0% | 100.0% | 1.000 |
+| hr | 11 | 90.9% | 100.0% | 0.955 |
+| operations | 8 | 100.0% | 100.0% | 1.000 |
+| support | 8 | 100.0% | 100.0% | 1.000 |
+
+## By question kind (answerable)
+
+| Kind | Questions | Recall@1 | Recall@k |
+| --- | --- | --- | --- |
+| general | 4 | 100.0% | 100.0% |
+| keyword | 2 | 100.0% | 100.0% |
+| long_doc | 9 | 100.0% | 100.0% |
+| near_duplicate | 3 | 100.0% | 100.0% |
+| ocr | 2 | 100.0% | 100.0% |
+| paraphrase | 8 | 100.0% | 100.0% |
+| superseded | 1 | 0.0% | 100.0% |
+| table | 3 | 100.0% | 100.0% |
+
+## Not ranked first (ranking weaknesses)
+
+- **d38** (hr, superseded): How many days of annual leave do I get under the current policy?  
+  Expected: EVAL HR Annual Leave Policy p1 · page rank: 2 · got: EVAL HR Annual Leave Policy p2; EVAL HR Annual Leave Policy p1; EVAL General Public Holidays p1
+
+## Restricted questions
+
+- **d19** (support): What is the salary range for band C? · leaks: 0 · got: EVAL Support Shipping Policy p1; EVAL General Office Attendance Memo p1; EVAL Support Escalation Matrix p1
+- **d20** (operations): How many weeks of parental leave do birth parents get? · leaks: 0 · got: EVAL General Remote Work Policy p1; EVAL General Office Attendance Memo p1; EVAL Support Shipping Policy p1
+- **d21** (hr): How do I escalate a P2 incident? · leaks: 0 · got: EVAL General Fire Evacuation p1; EVAL HR Disciplinary Procedure p1; EVAL General Expense Claims p1
+- **d22** (support): What is the forklift speed limit? · leaks: 0 · got: EVAL Support Escalation Matrix p1; EVAL General Remote Work Policy p1; EVAL Support Shipping Policy p1
+- **d39** (support): How long is the probation period for new staff? · leaks: 0 · got: EVAL General Office Attendance Memo p1; EVAL General Remote Work Policy p1; EVAL Support Shipping Policy p1
+
+## Unanswerable questions (input for Week 3 refusal logic)
+
+- **d23** (hr): What is the policy on working remotely from abroad? · got: EVAL General Remote Work Policy p1; EVAL HR Annual Leave Policy p2; EVAL General Office Attendance Memo p1
+- **d24** (support): How do I reset a customer's smart TV? · got: EVAL Support Router Troubleshooting p2; EVAL Support Product Manual p5; EVAL Support Subscription Cancellation p1
+- **d40** (operations): What is the policy on charging electric cars at work? · got: EVAL Support Escalation Matrix p1; EVAL General Remote Work Policy p1; EVAL Ops Loading Bay Rules p1
+
+Saved: /code/eval/reports/dev-20261015-083721.md
+
+===== 13:37:22 6. Fingerprints =====
+fb7fcd48ad3bd82445293b4bd88c3a0cbce514ec
+frozen-path diff lines (expect 0): 0
+a1c13ccf958b63c756a1e4b355e029de2f0e986958b112751de9df0f66ecb041  requirements.lock
+
+===== 13:37:22 DONE: clean room passed =====
