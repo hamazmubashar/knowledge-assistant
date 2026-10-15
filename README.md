@@ -40,6 +40,11 @@ docker compose ps                      # db should be "healthy"
 
 # Create the database schema
 docker compose exec api alembic upgrade head
+
+# Restart the worker. On a first install it starts before the schema exists and exits;
+# until it is restarted, uploaded documents are never processed.
+docker compose restart worker
+docker compose ps        # all four services should be running
 ```
 
 The first build downloads the embedding model (`BAAI/bge-small-en-v1.5`) and the reranker model (disabled in V1) into the image. Expect several minutes.
