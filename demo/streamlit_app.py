@@ -87,12 +87,14 @@ tab_ask, tab_search, tab_docs, tab_eval, tab_how = st.tabs(
 def show_answer(item: dict):
     r = item["result"]
     st.markdown(f"**Question:** {esc(item['question'])}")
-    st.caption(f"Demonstrates: {item['shows']}")
+    st.caption(f"Scenario: {item['shows']}")
 
     if r.get("status") != "answered" or not r.get("sentences"):
         reason = {"weak_evidence": "no passage you can access was close enough to the question "
                                    "(evidence gate), so no model was called",
                   "model_declined": "the model found the evidence did not answer the question",
+                  "unsupported_answer": "the checker could not confirm the drafted sentences "
+                                        "against their quotes, so the answer was withheld",
                   }.get(r.get("refusal_reason"), r.get("refusal_reason") or "not answerable")
         st.warning(f"**No answer found in your documents.**\n\n{esc(r.get('answer') or '')}\n\n"
                    f"Why: {esc(reason)}.")
@@ -137,7 +139,7 @@ def show_answer(item: dict):
                    help="Draft sentences removed because their quote was not on the page or the "
                         "checker found the quote did not support them.")
     if r.get("model"):
-        st.caption(f"Answer model: {r['model']} (local) · checker: {r.get('judge') or '–'}")
+        st.caption(f"Answer model: {r['model']} · checker: {r.get('judge') or '–'}")
 
 
 with tab_ask:

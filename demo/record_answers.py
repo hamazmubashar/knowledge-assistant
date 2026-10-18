@@ -5,8 +5,9 @@ production answer pipeline inside the api container against the isolated knowled
 database (the 32-document synthetic corpus in app/eval/corpus.py). Nothing is edited;
 the output is written to demo/recorded_answers.json.
 
-    python demo/record_answers.py      # from the repo or worktree root
+    python demo/record_answers.py --model gemini:gemini-3.8-flash   # from the repo or worktree root
 """
+import argparse
 import datetime as dt
 import json
 import os
@@ -42,32 +43,64 @@ QUESTIONS = [
 ]
 
 
-def run(role: str, question: str) -> dict:
-    # Use the running demo stack's containers even when run from a git worktree.
+def run(role: str, question: str, model: str | None) -> dict:
+    """Same command as scripts/ask.sh, optionally with a different answer model."""
     env = {**os.environ, "COMPOSE_PROJECT_NAME": os.environ.get("COMPOSE_PROJECT_NAME", "knowledge-assistant")}
-    proc = subprocess.run(["./scripts/ask.sh", role, question], cwd=ROOT, env=env,
-                          capture_output=True, text=True, timeout=900)
+    cmd = ["docker", "compose", "exec", "-T"]
+    if model:
+        cmd += ["-e", f"GENERATION_MODEL={model}"]
+    cmd += ["api", "sh", "-c",
+            'export DATABASE_URL="${DATABASE_URL%/*}/knowledge_eval" STORAGE_BUCKET=eval-documents\n'
+            'python -m app.scripts.ask --role "$0" "$1"', role, question]
+    proc = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=900)
     out = proc.stdout
     start = out.find("{")
     if proc.returncode != 0 or start < 0:
-        raise RuntimeError(f"ask.sh failed ({proc.returncode}): {proc.stderr.strip()[-400:]}")
+        raise RuntimeError(f"ask failed ({proc.returncode}): {proc.stderr.strip()[-400:]}")
     result = json.loads(out[start:])
     result.pop("raw_model_output", None)
     return result
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", help="answer model, e.g. gemini:gemini-3.8-flash (default: the configured one)")
+    ap.add_argument("--resume", action="store_true",
+                    help="keep answers already recorded with the same model; re-ask only the failed ones")
+    ap.add_argument("--pause", type=float, default=None,
+                    help="seconds between questions (default 13 for Gemini free-tier limits, else 0)")
+    args = ap.parse_args()
+    pause = args.pause if args.pause is not None else (13.0 if (args.model or "").startswith("gemini:") else 0.0)
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
                             capture_output=True, text=True).stdout.strip()
+    done = {}
+    if args.resume and OUT.exists():
+        old = json.loads(OUT.read_text(encoding="utf-8"))
+        if old.get("answer_model_override") == args.model:
+            done = {(r["role"], r["question"]): r for r in old.get("records", []) if "result" in r}
+        print(f"Resuming: keeping {len(done)} recorded answers", flush=True)
     records = []
+    asked = 0
     for i, (role, question, shows) in enumerate(QUESTIONS, start=1):
+        if (role, question) in done:
+            records.append(done[(role, question)])
+            continue
+        if pause and asked:
+            time.sleep(pause)
+        asked += 1
         t0 = time.time()
         print(f"[{i}/{len(QUESTIONS)}] {role}: {question}", flush=True)
         try:
-            result = run(role, question)
+            result = run(role, question, args.model)
         except Exception as err:  # keep going; a failed item is recorded as such
             print(f"   FAILED: {err}", flush=True)
             records.append({"role": role, "question": question, "shows": shows, "error": str(err)})
+            if "QuotaExhausted" in str(err):
+                print("   Daily quota used up: stopping. Run again later with --resume.", flush=True)
+                records += [{"role": r, "question": q, "shows": sh, "error": "not asked (quota)"}
+                            for r, q, sh in QUESTIONS[i:] if (r, q) not in done] + \
+                           [done[(r, q)] for r, q, sh in QUESTIONS[i:] if (r, q) in done]
+                break
             continue
         print(f"   {result.get('status')} ({result.get('refusal_reason') or 'ok'}) "
               f"in {time.time() - t0:.0f} s", flush=True)
@@ -77,6 +110,7 @@ def main():
         "recorded_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "commit": commit,
         "corpus": "app/eval/corpus.py",
+        "answer_model_override": args.model,
         "note": "Recorded from the production answer pipeline (scripts/ask.sh) against the "
                 "synthetic evaluation corpus. Not edited.",
         "records": records,
