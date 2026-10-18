@@ -108,8 +108,13 @@ def show_answer(item: dict):
                 cites.append(c)
             nums.append(key_to_n[key])
         if r.get("conflict"):
-            st.warning("**The documents disagree.** Both versions are shown with their sources. "
-                       "Confirm with the document owner before acting.")
+            if r.get("dropped_sentences"):
+                st.warning("**The documents disagree.** The verifier removed part of the answer "
+                           "because its quote could not be confirmed, so only one version is shown. "
+                           "Check the sources and confirm with the document owner before acting.")
+            else:
+                st.warning("**The documents disagree.** Both versions are shown with their sources. "
+                           "Confirm with the document owner before acting.")
         with st.container(border=True):
             st.markdown(" ".join(f"{esc(s['text'])} **[{n}]**"
                                  for s, n in zip(r["sentences"], nums)))
