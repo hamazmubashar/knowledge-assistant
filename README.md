@@ -1,119 +1,126 @@
-# Knowledge Assistant (V1)
+<div align="center">
 
-**Live demo:** <https://knowledge-assistant-demo.streamlit.app> (synthetic documents only)
+# 📚 Knowledge Assistant
 
-Internal question-answering over company PDFs. Every answer sentence is checked against a passage on the cited page, and users only search the document groups their role allows.
+### Enterprise RAG over company PDFs — answers you can verify, sentence by sentence
 
-**Status: Pending Independent Acceptance.** This is not a production release. The acceptance configuration is frozen at tag `v1-acceptance-freeze` (commit `16b6215`). Later commits add evidence and tooling only; `git diff v1-acceptance-freeze HEAD -- app/ docker-compose.yml Dockerfile requirements.lock` must be empty.
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://knowledge-assistant-demo.streamlit.app)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/pgvector-PostgreSQL_16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 
-## What runs where
+**[🚀 Try the Live Demo](https://knowledge-assistant-demo.streamlit.app)** · [Results](#-results) · [Architecture](#-architecture) · [Run it](#-run-it) · [Handover docs](docs/HANDOVER.md)
 
-| Service | Image | Port | Role |
-| --- | --- | --- | --- |
-| api | built from `Dockerfile` (python:3.12-slim, pinned by digest) | 8000 | FastAPI app and web UI |
-| worker | same image | none | extracts, checks and indexes uploaded PDFs |
-| db | `pgvector/pgvector:pg16` | 5432 | documents, chunks, embeddings, users |
-| storage | `rustfs/rustfs:latest` | 9000–9001 | S3-compatible PDF storage |
-| Ollama (on the host, not in Compose) | — | 11434 | local answer model `qwen2.5:3b` |
+</div>
 
-The judge model (support and relevance checks) is Gemini 3.5 Flash Lite and needs `GEMINI_API_KEY`. **Use synthetic documents only**: with the judge enabled, passages from answered questions are sent to Google.
+---
 
-## Prerequisites
+## 🎯 The problem
 
-- Docker Desktop (or Docker Engine with Compose v2)
-- [Ollama](https://ollama.com) running on the host, then `ollama pull qwen2.5:3b`
-- A Gemini API key for the judge
+Staff waste time hunting through HR, operations and support PDFs, and a plain chatbot over those documents creates a worse problem: confident answers that aren't in the source, and answers drawn from documents the person isn't allowed to see.
 
-## Setup
+This system was built as a client engagement for an operations lead, against written acceptance targets. It answers questions over company PDFs with three guarantees:
+
+- **Every answer sentence is checked against the cited page.** Sentences the evidence doesn't support are dropped; if nothing survives, the system refuses instead of guessing.
+- **Role-based access is enforced at retrieval.** A support agent's search never sees HR documents — measured, not assumed (0 leaks).
+- **Citations are clickable.** Each answer cites document, version and page, and opens the PDF at that page.
+
+All demo data is synthetic.
+
+---
+
+## 📊 Results
+
+Evaluated with a reproducible harness: each report records corpus version, question-file hash, code version, prompt fingerprint and dependency fingerprint. Scoring is deterministic (keyword facts + citation page match), not an AI grader.
+
+**Retrieval** (hybrid search, k = 5)
+
+| Metric | Dev set (32 Q) | Held-out set (31 Q) |
+|---|---|---|
+| Recall@1 (correct page first) | 96.9% | 96.8% |
+| Recall@5 (correct page) | 100% | 100% |
+| MRR | 0.984 | 0.984 |
+| Access-control leaks | **0** / 5 restricted | **0** / 6 restricted |
+| Results from superseded versions | 0 | 0 |
+
+**Answers** (frozen configuration, dev set, against the client's targets)
+
+| Metric | Target | Result |
+|---|---|---|
+| Answer correctness | ≥ 85% | **92.9%** ✅ |
+| Unsupported answers | ≤ 5% | **0%** ✅ |
+| Over-refusal | ≤ 10% | **7.1%** ✅ |
+| Correct refusals (absent / insufficient evidence) | all | **6 / 6** ✅ |
+| Prompt-injection attempts resisted | all | **3 / 3** ✅ |
+| Access leaks | 0 | **0** ✅ |
+| Citation accuracy | ≥ 95% | 92.9% ❌ (1 miss) |
+
+> **Honest read:** the dev set was used during tuning, so it flatters the system. An earlier held-out run (before the configuration was frozen) scored 75% correctness with 25% over-refusal — below target, because the evidence gate was too strict. That is why final sign-off is an **independent acceptance run** on a sealed question set the developer never sees (see [docs/HANDOVER.md](docs/HANDOVER.md#independent-acceptance-run)).
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+    U[User] -->|sign in, ask| API[FastAPI API + web UI]
+    A[Admin] -->|upload PDF| API
+    API -->|store PDF| S[(S3-compatible storage)]
+    API -->|queue| W[Ingest worker]
+    W -->|extract text, flag scanned pages,<br/>chunk, embed| DB[(PostgreSQL + pgvector)]
+    API -->|hybrid search<br/>vector + keyword, RRF| DB
+    API -->|role filter| DB
+    API -->|grounded prompt| LLM[Answer model<br/>Ollama qwen2.5:3b]
+    API -->|per-sentence support<br/>& relevance check| J[Judge model]
+    API -->|answer + page citations| U
+```
+
+| Stage | What happens |
+|---|---|
+| **Ingest** | Worker extracts text per page, flags scanned pages with no text layer instead of silently indexing them, chunks and embeds (BAAI/bge-small-en-v1.5, 384-d) |
+| **Retrieve** | Hybrid vector + keyword search fused with Reciprocal Rank Fusion; filtered by the user's role groups; superseded document versions excluded |
+| **Gate** | Weak evidence (distance above the frozen cut-off) → refuse rather than answer |
+| **Generate** | Lead text treated as data, not instructions; injection patterns screened |
+| **Verify** | A separate judge model checks every sentence against its cited passage; unsupported sentences are dropped |
+
+---
+
+## 🧰 Tech stack
+
+| Layer | Tools |
+|---|---|
+| API & UI | FastAPI, vanilla JS web UI, JWT auth, role-based authorization |
+| Data | PostgreSQL 16 + pgvector, Alembic migrations, S3-compatible object storage |
+| Retrieval | BAAI/bge-small-en-v1.5 embeddings, hybrid search with RRF |
+| LLMs | Ollama (`qwen2.5:3b`) for answers; Gemini Flash Lite as an independent judge |
+| Engineering | Docker Compose (4 services), pinned base image by digest, locked dependencies, 100-test pytest suite |
+| Evaluation | Retrieval eval (Recall@k, MRR, leaks), answer eval vs client targets, judge-accuracy test, sealed acceptance runner |
+
+---
+
+## ▶️ Run it
 
 ```bash
 git clone https://github.com/hamazmubashar/knowledge-assistant.git
 cd knowledge-assistant
-git checkout v1-handover              # frozen code plus README and evidence
-
-cp .env.example .env
-# Fill in every value: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB,
-#   STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, GEMINI_API_KEY, and
-#   JWT_SECRET (at least 32 characters; generate one with: openssl rand -hex 32).
-# The API refuses to start if JWT_SECRET is missing or shorter than 32 characters.
-
+cp .env.example .env          # fill in every value
 docker compose up -d --build
-docker compose ps                      # db should be "healthy"
-
-# Create the database schema
 docker compose exec api alembic upgrade head
-
-# Restart the worker. On a first install it starts before the schema exists and exits;
-# until it is restarted, uploaded documents are never processed.
 docker compose restart worker
-docker compose ps        # all four services should be running
 ```
 
-The first build downloads the embedding model (`BAAI/bge-small-en-v1.5`) and the reranker model (disabled in V1) into the image. Expect several minutes.
+Then open http://localhost:8000. Full setup, user creation, tests and evaluation commands are in **[docs/HANDOVER.md](docs/HANDOVER.md)**; the formal technical handover is [docs/handover/Technical-Handover-V1.pdf](docs/handover/Technical-Handover-V1.pdf).
 
-## Create users
+---
 
-Passwords are prompted for and must be at least 12 characters.
+## ⚠️ Known limitations
 
-```bash
-docker compose exec api python -m app.scripts.create_user --email hr.admin@demo.test --role hr --admin-groups hr,general
-docker compose exec api python -m app.scripts.create_user --email support@demo.test  --role support
-docker compose exec api python -m app.scripts.create_user --email ops@demo.test      --role operations
-```
+- **Status: pending independent acceptance** — not a production release. No SSO, backups or monitoring.
+- The public demo answers with local `qwen2.5:3b`; the evaluated configuration used a larger hosted model that needs provider approval before use with real company data.
+- With the judge enabled, passages are sent to a third-party API — synthetic documents only.
+- Evaluation sets are small (~30 questions each); results show the system works on this corpus, not a guaranteed rate on any corpus.
 
-Roles: `support`, `operations`, `hr`, `system_admin`. `--admin-groups` lets a user upload to and manage those groups (comma-separated).
+---
 
-## Use it
-
-Open http://localhost:8000 and sign in.
-
-- **Ask**: answers cite document, version and page. **Open PDF** opens the cited page.
-- **Documents** (admins only): upload a PDF to a group. The status goes from processing to **Published** once text is extracted, checked and indexed. Scanned pages without a text layer are flagged rather than silently indexed.
-
-A synthetic demo PDF works for a quick check: upload it to **General**, wait for **Published**, then ask a question it answers.
-
-## Tests
-
-```bash
-docker compose exec api python -m pytest -q
-```
-
-Expected: `100 passed, 1 warning`. The warning is a Starlette deprecation raised when FastAPI's test client is imported. It affects tests only and is left alone because fixing it would change the frozen dependency lock.
-
-## Evaluation
-
-Evaluations run against a separate `knowledge_eval` database, which is rebuilt on every run. The demo database is never touched.
-
-```bash
-./scripts/eval.sh dev              # retrieval: Recall@1/@5, MRR, access leaks, superseded results
-./scripts/answer_eval.sh dev       # answers: correctness, citations, unsupported claims, refusals
-```
-
-Reports are written to `eval/reports/`. Each report records the corpus version, question-file sha256, code version, prompt fingerprint and dependency fingerprint.
-
-### Independent acceptance run
-
-The acceptance question set is written by an independent reviewer. The development team does not see it before the run.
-
-1. Place the sealed set at `eval/acceptance_v1.csv`. Place the fingerprint, delivered separately, at `eval/acceptance_v1.sha256`. Both paths are git-ignored.
-2. Make sure the working tree is clean (`git status`).
-3. Run `./scripts/acceptance_run.sh`.
-
-The script refuses to run on uncommitted changes and verifies the fingerprint before anything else. Exit code 2 means a mismatch, 3 means a missing file. In either case **stop and escalate; do not edit the file.** The set can be run only once, and the log is saved to `eval/logs/`.
-
-## Frozen configuration
-
-| Setting | Value |
-| --- | --- |
-| Evidence cut-off (`ANSWER_MAX_DISTANCE`) | 0.35 |
-| Reranker | off |
-| Embeddings | BAAI/bge-small-en-v1.5, 384 dimensions, hybrid search with RRF k = 60 |
-| Dependency fingerprint | `9b571fec3b87` (`requirements.lock`) |
-| Prompt fingerprint | `8db7c1c606d6` |
-| Base image | `python:3.12-slim@sha256:a6e34c59…` |
-
-## Known limitations
-
-- The web demo answers with local `qwen2.5:3b`. The evaluated configuration used Gemini 3.8 Flash, which needs provider approval before it can be used with company data.
-- No production deployment, SSO, backups or monitoring.
-- See the Technical Handover document for the full list, security notes and outstanding approvals.
+**Built by [Hamaz Mubashar](https://www.linkedin.com/in/hamazmubashar)** · [More projects](https://github.com/hamazmubashar)
