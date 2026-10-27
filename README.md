@@ -1,5 +1,7 @@
 # Knowledge Assistant (V1)
 
+**Live demo:** <https://knowledge-assistant-demo.streamlit.app> (synthetic documents only)
+
 Internal question-answering over company PDFs. Every answer sentence is checked against a passage on the cited page, and users only search the document groups their role allows.
 
 **Status: Pending Independent Acceptance.** This is not a production release. The acceptance configuration is frozen at tag `v1-acceptance-freeze` (commit `16b6215`). Later commits add evidence and tooling only; `git diff v1-acceptance-freeze HEAD -- app/ docker-compose.yml Dockerfile requirements.lock` must be empty.
