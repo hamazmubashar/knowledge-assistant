@@ -81,7 +81,7 @@ flowchart LR
 | **Ingest** | Worker extracts text per page, flags scanned pages with no text layer instead of silently indexing them, chunks and embeds (BAAI/bge-small-en-v1.5, 384-d) |
 | **Retrieve** | Hybrid vector + keyword search fused with Reciprocal Rank Fusion; filtered by the user's role groups; superseded document versions excluded |
 | **Gate** | Weak evidence (distance above the frozen cut-off) → refuse rather than answer |
-| **Generate** | Lead text treated as data, not instructions; injection patterns screened |
+| **Generate** | Retrieved passages treated as data, not instructions; injection attempts in documents resisted |
 | **Verify** | A separate judge model checks every sentence against its cited passage; unsupported sentences are dropped |
 
 ---
