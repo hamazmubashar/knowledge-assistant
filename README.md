@@ -1,105 +1,94 @@
 <div align="center">
 
-# 📚 Knowledge Assistant
+# Knowledge Assistant
 
-### Enterprise RAG over company PDFs — answers you can verify, sentence by sentence
+**Ask questions about company documents and get answers you can check, down to the page and sentence.**
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://knowledge-assistant-demo.streamlit.app)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![PostgreSQL](https://img.shields.io/badge/pgvector-PostgreSQL_16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
+[![pgvector](https://img.shields.io/badge/pgvector-PostgreSQL_16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 
-**[🚀 Try the Live Demo](https://knowledge-assistant-demo.streamlit.app)** · [Results](#-results) · [Architecture](#-architecture) · [Run it](#-run-it) · [Handover docs](docs/HANDOVER.md)
+[**Try the live demo**](https://knowledge-assistant-demo.streamlit.app) · [Results](#results) · [How it works](#how-it-works) · [Run it](#run-it-locally) · [Handover guide](docs/HANDOVER.md)
 
 </div>
 
 ---
 
-## 🎯 The problem
+## The problem
 
-Staff waste time hunting through HR, operations and support PDFs, and a plain chatbot over those documents creates a worse problem: confident answers that aren't in the source, and answers drawn from documents the person isn't allowed to see.
+Staff spend real time digging through HR, operations and support PDFs for answers. A basic chatbot over those files makes things worse in two ways: it answers confidently with things the documents never said, and it happily quotes documents the person asking isn't allowed to see.
 
-This system was built as a client engagement for an operations lead, against written acceptance targets. It answers questions over company PDFs with three guarantees:
+I built this for an operations lead as a client engagement, against written acceptance targets agreed up front. It makes three promises:
 
-- **Every answer sentence is checked against the cited page.** Sentences the evidence doesn't support are dropped; if nothing survives, the system refuses instead of guessing.
-- **Role-based access is enforced at retrieval.** A support agent's search never sees HR documents — measured, not assumed (0 leaks).
-- **Citations are clickable.** Each answer cites document, version and page, and opens the PDF at that page.
+- **Every sentence in an answer is checked against the page it cites.** Sentences the page doesn't support are removed. If nothing survives, it says it doesn't know rather than guessing.
+- **People only search what their role allows.** Access rules are applied during retrieval, and the evaluation measures leaks rather than assuming there are none.
+- **You can check every answer yourself.** Each one cites the document, version and page, and opens the PDF at that page.
 
-All demo data is synthetic.
+All the documents in the demo are synthetic.
 
----
+## Results
 
-## 📊 Results
+Each evaluation report records the document set, question file, code version, prompt and dependencies it ran with, so any number below can be reproduced. Scoring checks facts and cited pages mechanically; no AI marks its own homework.
 
-Evaluated with a reproducible harness: each report records corpus version, question-file hash, code version, prompt fingerprint and dependency fingerprint. Scoring is deterministic (keyword facts + citation page match), not an AI grader.
+**Finding the right page** (hybrid search, top 5)
 
-**Retrieval** (hybrid search, k = 5)
-
-| Metric | Dev set (32 Q) | Held-out set (31 Q) |
+| Measure | Development set (32 questions) | Held-out set (31 questions) |
 |---|---|---|
-| Recall@1 (correct page first) | 96.9% | 96.8% |
-| Recall@5 (correct page) | 100% | 100% |
-| MRR | 0.984 | 0.984 |
-| Access-control leaks | **0** / 5 restricted | **0** / 6 restricted |
-| Results from superseded versions | 0 | 0 |
+| Correct page ranked first | 96.9% | 96.8% |
+| Correct page in top 5 | 100% | 100% |
+| Mean reciprocal rank | 0.984 | 0.984 |
+| Restricted documents leaked | **0** of 5 attempts | **0** of 6 attempts |
+| Outdated document versions returned | 0 | 0 |
 
-**Answers** (frozen configuration, dev set, against the client's targets)
+**Answering** (final configuration, development set, against the client's targets)
 
-| Metric | Target | Result |
+| Measure | Target | Result |
 |---|---|---|
-| Answer correctness | ≥ 85% | **92.9%** ✅ |
-| Unsupported answers | ≤ 5% | **0%** ✅ |
-| Over-refusal | ≤ 10% | **7.1%** ✅ |
-| Correct refusals (absent / insufficient evidence) | all | **6 / 6** ✅ |
-| Prompt-injection attempts resisted | all | **3 / 3** ✅ |
+| Correct answers | ≥ 85% | **92.9%** ✅ |
+| Unsupported statements | ≤ 5% | **0%** ✅ |
+| Refusing questions it could answer | ≤ 10% | **7.1%** ✅ |
+| Refusing when the answer isn't in the documents | all | **6 of 6** ✅ |
+| Resisting prompt-injection attempts | all | **3 of 3** ✅ |
 | Access leaks | 0 | **0** ✅ |
-| Citation accuracy | ≥ 95% | 92.9% ❌ (1 miss) |
+| Correct citations | ≥ 95% | 92.9% ❌ (one miss) |
 
-> **Honest read:** the dev set was used during tuning, so it flatters the system. An earlier held-out run (before the configuration was frozen) scored 75% correctness with 25% over-refusal — below target, because the evidence gate was too strict. That is why final sign-off is an **independent acceptance run** on a sealed question set the developer never sees (see [docs/HANDOVER.md](docs/HANDOVER.md#independent-acceptance-run)).
+The development set was used while tuning, so it flatters the system. An earlier run on the held-out set, before the configuration was frozen, scored 75% correct with 25% unnecessary refusals: the evidence threshold was too strict. That gap is exactly why final sign-off is an **independent acceptance run** on a sealed question set I never see. The process is in the [handover guide](docs/HANDOVER.md#independent-acceptance-run).
 
----
-
-## 🏗️ Architecture
+## How it works
 
 ```mermaid
 flowchart LR
-    U[User] -->|sign in, ask| API[FastAPI API + web UI]
+    U[Staff member] -->|sign in, ask| API[FastAPI + web UI]
     A[Admin] -->|upload PDF| API
-    API -->|store PDF| S[(S3-compatible storage)]
-    API -->|queue| W[Ingest worker]
-    W -->|extract text, flag scanned pages,<br/>chunk, embed| DB[(PostgreSQL + pgvector)]
-    API -->|hybrid search<br/>vector + keyword, RRF| DB
-    API -->|role filter| DB
-    API -->|grounded prompt| LLM[Answer model<br/>Ollama qwen2.5:3b]
-    API -->|per-sentence support<br/>& relevance check| J[Judge model]
-    API -->|answer + page citations| U
+    API -->|store file| S[(Object storage)]
+    API -->|queue| W[Background worker]
+    W -->|read pages, flag scans,<br/>split, embed| DB[(PostgreSQL + pgvector)]
+    API -->|search within the user's<br/>allowed groups| DB
+    API -->|evidence only| LLM[Answer model]
+    API -->|check each sentence<br/>against its page| J[Separate judge model]
+    API -->|answer with page citations| U
 ```
 
-| Stage | What happens |
+1. **Reading documents.** A background worker extracts text page by page. Scanned pages with no text layer are flagged instead of quietly indexed as blank. Text is split into chunks and embedded with BAAI/bge-small-en-v1.5.
+2. **Searching.** Vector search and keyword search run together and are merged with reciprocal rank fusion. Results are filtered to the user's document groups, and superseded versions are excluded.
+3. **Deciding whether to answer.** If the best evidence isn't close enough, it refuses instead of answering from thin material.
+4. **Writing the answer.** The model is told to treat the retrieved text as material to quote from, never as instructions to follow.
+5. **Checking it.** A different model checks every sentence against the passage it cites, and unsupported sentences are dropped.
+
+## Tech stack
+
+| Area | Tools |
 |---|---|
-| **Ingest** | Worker extracts text per page, flags scanned pages with no text layer instead of silently indexing them, chunks and embeds (BAAI/bge-small-en-v1.5, 384-d) |
-| **Retrieve** | Hybrid vector + keyword search fused with Reciprocal Rank Fusion; filtered by the user's role groups; superseded document versions excluded |
-| **Gate** | Weak evidence (distance above the frozen cut-off) → refuse rather than answer |
-| **Generate** | Retrieved passages treated as data, not instructions; injection attempts in documents resisted |
-| **Verify** | A separate judge model checks every sentence against its cited passage; unsupported sentences are dropped |
+| App | FastAPI, a plain HTML/JS interface, JWT sign-in, role-based access |
+| Data | PostgreSQL 16 with pgvector, Alembic migrations, S3-compatible file storage |
+| Search | bge-small-en-v1.5 embeddings, hybrid search with reciprocal rank fusion |
+| Models | Ollama (`qwen2.5:3b`) for answers, Gemini Flash Lite as the independent checker |
+| Engineering | Docker Compose (4 services), base image pinned by digest, locked dependencies, 100 tests |
+| Evaluation | Retrieval and answer reports against the client's targets, a test of the checker's own accuracy, and a sealed acceptance runner |
 
----
-
-## 🧰 Tech stack
-
-| Layer | Tools |
-|---|---|
-| API & UI | FastAPI, vanilla JS web UI, JWT auth, role-based authorization |
-| Data | PostgreSQL 16 + pgvector, Alembic migrations, S3-compatible object storage |
-| Retrieval | BAAI/bge-small-en-v1.5 embeddings, hybrid search with RRF |
-| LLMs | Ollama (`qwen2.5:3b`) for answers; Gemini Flash Lite as an independent judge |
-| Engineering | Docker Compose (4 services), pinned base image by digest, locked dependencies, 100-test pytest suite |
-| Evaluation | Retrieval eval (Recall@k, MRR, leaks), answer eval vs client targets, judge-accuracy test, sealed acceptance runner |
-
----
-
-## ▶️ Run it
+## Run it locally
 
 ```bash
 git clone https://github.com/hamazmubashar/knowledge-assistant.git
@@ -110,17 +99,15 @@ docker compose exec api alembic upgrade head
 docker compose restart worker
 ```
 
-Then open http://localhost:8000. Full setup, user creation, tests and evaluation commands are in **[docs/HANDOVER.md](docs/HANDOVER.md)**; the formal technical handover is [docs/handover/Technical-Handover-V1.pdf](docs/handover/Technical-Handover-V1.pdf).
+Then open http://localhost:8000. Creating users, running the tests and running the evaluations are covered step by step in the **[handover guide](docs/HANDOVER.md)**. The formal technical handover is [docs/handover/Technical-Handover-V1.pdf](docs/handover/Technical-Handover-V1.pdf).
 
----
+## Limitations
 
-## ⚠️ Known limitations
+- It's waiting on independent acceptance and isn't a production release: no single sign-on, backups or monitoring yet.
+- The public demo answers with a small local model. The evaluated setup used a larger hosted model, which needs provider approval before it can be used with real company data.
+- When the checker is on, passages are sent to an outside API, so use synthetic documents only.
+- The evaluation sets are small (around 30 questions each). The results show it works on this document set, not a guaranteed rate on any other.
 
-- **Status: pending independent acceptance** — not a production release. No SSO, backups or monitoring.
-- The public demo answers with local `qwen2.5:3b`; the evaluated configuration used a larger hosted model that needs provider approval before use with real company data.
-- With the judge enabled, passages are sent to a third-party API — synthetic documents only.
-- Evaluation sets are small (~30 questions each); results show the system works on this corpus, not a guaranteed rate on any corpus.
+## Author
 
----
-
-**Built by [Hamaz Mubashar](https://www.linkedin.com/in/hamazmubashar)** · [More projects](https://github.com/hamazmubashar)
+**Hamaz Mubashar** · [LinkedIn](https://www.linkedin.com/in/hamazmubashar) · [More projects](https://github.com/hamazmubashar)
